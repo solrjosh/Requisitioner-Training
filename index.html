@@ -631,8 +631,24 @@
               </span>
             </span>
             <div class="radio-group" role="radiogroup" aria-labelledby="label-account-authority">
-              <label><input type="radio" name="accountAuthority" value="yes" /> Enabled</label>
-              <label><input type="radio" name="accountAuthority" value="no" checked /> Not Enabled</label>
+              <label><input type="radio" name="accountAuthority" id="aa-yes" value="yes" /> Enabled</label>
+              <label><input type="radio" name="accountAuthority" id="aa-no" value="no" checked /> Not Enabled</label>
+            </div>
+          </div>
+
+          <!-- AUC sub-toggle (shown when Account Authority = Enabled) -->
+          <div class="sub-fields hidden" id="auc-sub-fields">
+            <div class="toggle-row">
+              <span class="toggle-label" id="label-auc">
+                Automatic User Consolidation (AUC)
+                <span class="field-hint" style="font-weight:400;display:block;margin-top:2px;">
+                  Determines which account merge flow slide is included
+                </span>
+              </span>
+              <div class="radio-group" role="radiogroup" aria-labelledby="label-auc">
+                <label><input type="radio" name="aucEnabled" value="yes" checked /> With AUC</label>
+                <label><input type="radio" name="aucEnabled" value="no" /> Without AUC</label>
+              </div>
             </div>
           </div>
 
@@ -1030,6 +1046,28 @@
         reason: 'Account Authority not enabled — consolidation invitation slide not applicable',
       },
 
+      // ── AUC (Automatic User Consolidation) rules ─────────────────────────────
+      // Slides 21 and 22 are the "user has used work email for a single user Amazon account"
+      // merge flow. They only apply when Account Authority is enabled.
+      // Slide 21 = "without AUC" flow → keep when AA ON + AUC OFF
+      // Slide 22 = "with AUC" flow    → keep when AA ON + AUC ON
+
+      // Rule 6e: Slide 21 — "without AUC" merge flow
+      // Remove when: Account Authority is OFF (not relevant) OR AUC is ON (wrong variant)
+      {
+        slides: [21],
+        condition: s => s.accountAuthority !== true || s.aucEnabled === true,
+        reason: 'Account Authority not enabled or AUC enabled — "without AUC" slide not applicable',
+      },
+
+      // Rule 6f: Slide 22 — "with AUC" merge flow
+      // Remove when: Account Authority is OFF (not relevant) OR AUC is OFF (wrong variant)
+      {
+        slides: [22],
+        condition: s => s.accountAuthority !== true || s.aucEnabled !== true,
+        reason: 'Account Authority not enabled or AUC not enabled — "with AUC" slide not applicable',
+      },
+
       // ── eProcurement-specific rules (Punchout only) ──────────────────────────
 
       // Rule 7: Ariba selected — remove Coupa slides 49–50
@@ -1237,6 +1275,12 @@
         map.set('with consolidation policy', '');
         map.set('without  consolidation policy', '');  // double-space variant in deck
         map.set('with  consolidation policy', '');     // double-space variant in deck
+
+        // AUC label cleanup — remove "with AUC" / "without AUC" badge from the retained slide
+        map.set('without  AUC', '');   // double-space variant as seen in deck
+        map.set('without AUC', '');
+        map.set('with  AUC', '');      // double-space variant as seen in deck
+        map.set('with AUC', '');
 
         // Guided Buying Preferred sub-tokens
         if (s.features.guidedBuyingPreferred) {
@@ -1546,11 +1590,29 @@
        * @param {JSZip} zip                    - Loaded JSZip instance (already mutated by removeSlides).
        * @param {Map<string,string>} tokenMap  - Token → replacement value map.
        * @param {string[]} retainedSlideFiles  - Array of slide file paths to process.
+       * @param {Object} formState             - Form state for conditional paragraph removal.
        * @returns {Promise<Array>} Array of SubstitutionRecord objects, one per slide file.
        */
-      async function substituteTokens(zip, tokenMap, retainedSlideFiles) {
+      async function substituteTokens(zip, tokenMap, retainedSlideFiles, formState) {
         const PLACEHOLDER_PATTERN = /\{\{[^}]+\}\}/g;
         const results = [];
+
+        // Build list of paragraph-level markers to remove based on formState.
+        // Each entry is a string that, if found inside an <a:p>...</a:p> block,
+        // causes the entire paragraph to be removed from the XML.
+        const removeParagraphsContaining = [];
+        if (formState && !formState.ingressPunchout) {
+          // Remove the "[For Punchout]" bullet on slide 9 when Punchout is not in scope
+          removeParagraphsContaining.push('[For Punchout]');
+        }
+        const ssoInUse = formState && (
+          (formState.ingressDirectAccess && formState.directAccessSso) ||
+          (formState.ingressPunchout && formState.punchoutSso)
+        );
+        if (!ssoInUse) {
+          // Remove the "[For SSO]" bullet on slide 9 when SSO is not in scope
+          removeParagraphsContaining.push('[For SSO]');
+        }
 
         for (const filePath of retainedSlideFiles) {
           const zipEntry = zip.file(filePath);
@@ -1558,6 +1620,20 @@
 
           let xml = await zipEntry.async('text');
           const fileSubstitutions = [];
+
+          // ── Paragraph-level removal ─────────────────────────────────────────
+          // Remove entire <a:p>...</a:p> blocks that contain conditional markers.
+          // This handles cases like the [For Punchout] and [For SSO] bullets on
+          // slide 9 where the content spans multiple <a:t> runs within one paragraph.
+          for (const marker of removeParagraphsContaining) {
+            xml = xml.replace(/<a:p>[\s\S]*?<\/a:p>/g, (para) => {
+              // Extract plain text from this paragraph to check for the marker
+              const paraText = (para.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [])
+                .map(t => t.replace(/<[^>]+>/g, ''))
+                .join('');
+              return paraText.includes(marker) ? '' : para;
+            });
+          }
 
           // Apply each token replacement in turn.
           for (const [token, value] of tokenMap) {
@@ -2542,7 +2618,7 @@
             .map(record => record.slideFile);
 
           // Step 6: Substitute tokens in all retained slides
-          const substitutions = await PptxManipulator.substituteTokens(zip, tokenMap, retainedSlideFiles);
+          const substitutions = await PptxManipulator.substituteTokens(zip, tokenMap, retainedSlideFiles, formState);
 
           // Step 7: Re-zip to a Blob
           const pptxBlob = await zip.generateAsync({
@@ -2769,6 +2845,7 @@
         _setRadio('directAccessSso', saved.directAccessSso ? 'on' : 'off');
         _setRadio('punchoutSso',     saved.punchoutSso     ? 'on' : 'off');
         _setRadio('accountAuthority', saved.accountAuthority ? 'yes' : 'no');
+        _setRadio('aucEnabled',       saved.aucEnabled !== false ? 'yes' : 'no');
 
         // Feature toggles
         const features = saved.features || {};
@@ -2889,6 +2966,11 @@
         // ── BPO sub-fields ──────────────────────────────────────────────────────
         // Show when featureBlanketPOs radio value is "yes".
         _toggleSubFields('bpo-sub-fields', bpoYes);
+
+        // ── AUC sub-fields ──────────────────────────────────────────────────────
+        // Show when Account Authority is "yes" (Enabled).
+        const accountAuthorityYes = document.querySelector('input[name="accountAuthority"]:checked')?.value === 'yes';
+        _toggleSubFields('auc-sub-fields', accountAuthorityYes);
       }
 
       // ── Visibility toggle helpers ─────────────────────────────────────────────
@@ -2936,6 +3018,7 @@
           directAccessSso: document.querySelector('input[name="directAccessSso"]:checked')?.value === 'on',
           punchoutSso: document.querySelector('input[name="punchoutSso"]:checked')?.value === 'on',
           accountAuthority: document.querySelector('input[name="accountAuthority"]:checked')?.value === 'yes',
+          aucEnabled: document.querySelector('input[name="aucEnabled"]:checked')?.value === 'yes',
           eproSystem: document.getElementById('epro-system').value,
           eproSystemCustomName: document.getElementById('epro-custom-name').value.trim(),
           identityProvider: document.getElementById('identity-provider').value.trim(),
