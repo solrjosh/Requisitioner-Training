@@ -622,6 +622,20 @@
             </div>
           </div>
 
+          <!-- Account Authority / Consolidation Policy -->
+          <div class="toggle-row" style="margin-top:8px;padding-top:14px;border-top:1px solid var(--color-border);">
+            <span class="toggle-label" id="label-account-authority">
+              Account Authority (Consolidation Policy)
+              <span class="field-hint" style="font-weight:400;display:block;margin-top:2px;">
+                Controls which registration scenario slides are included
+              </span>
+            </span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-account-authority">
+              <label><input type="radio" name="accountAuthority" value="yes" /> Enabled</label>
+              <label><input type="radio" name="accountAuthority" value="no" checked /> Not Enabled</label>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -794,6 +808,15 @@
             </div>
           </div>
 
+          <!-- Amazon Business Mobile App -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-mobile-app">Amazon Business Mobile App</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-mobile-app">
+              <label><input type="radio" name="featureMobileApp" value="yes" checked /> Yes</label>
+              <label><input type="radio" name="featureMobileApp" value="no" /> No</label>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -923,17 +946,20 @@
       // ── Ingress-based rules ──────────────────────────────────────────────────
 
       // Rule 1: Direct Access only — remove all Punchout-specific slides
+      // Includes: punchout shopping flow, punchout checkout, punchout errors/restrictions,
+      // and punchout-specific registration scenario slides (19, 23, 26)
       {
-        slides: [49, 50, 51, 52, 55, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
+        slides: [19, 23, 26, 49, 50, 51, 52, 55, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
         condition: s => s.ingressDirectAccess && !s.ingressPunchout,
         reason: 'Direct Access only — Punchout slides not applicable',
       },
 
-      // Rule 2: Punchout only — remove the Direct Access-specific slide
+      // Rule 2: Punchout only — remove Direct Access-specific slides
+      // Includes: DA checkout slide and DA-specific registration scenario slides (20, 24)
       {
-        slides: [68],
+        slides: [20, 24, 68],
         condition: s => s.ingressPunchout && !s.ingressDirectAccess,
-        reason: 'Punchout only — Direct Access slide not applicable',
+        reason: 'Punchout only — Direct Access slides not applicable',
       },
 
       // ── Registration scenario slides (15–18) ────────────────────────────────
@@ -966,6 +992,42 @@
         slides: [18],
         condition: s => !(s.ingressDirectAccess && s.directAccessSso),
         reason: 'Registration scenario: Direct Access with SSO not selected',
+      },
+
+      // ── Consolidation policy (Account Authority) rules ───────────────────────
+      // Slide 13 = "without consolidation policy" overview → keep when AA is OFF
+      // Slide 14 = "with consolidation policy" overview   → keep when AA is ON
+      // Slide 23 = Punchout deregister without AA         → keep when Punchout + AA OFF
+      // Slide 24 = DA deregister without AA               → keep when DA + AA OFF
+      // Slide 25 = Consolidation invitation flow          → keep when AA is ON
+
+      // Rule 6a: Slide 13 — "without consolidation policy" overview — remove when AA is ON
+      {
+        slides: [13],
+        condition: s => s.accountAuthority === true,
+        reason: 'Account Authority enabled — "without consolidation policy" slide not applicable',
+      },
+
+      // Rule 6b: Slide 14 — "with consolidation policy" overview — remove when AA is OFF
+      {
+        slides: [14],
+        condition: s => s.accountAuthority !== true,
+        reason: 'Account Authority not enabled — "with consolidation policy" slide not applicable',
+      },
+
+      // Rule 6c: Slides 23 & 24 — deregister "without consolidation policy" — remove when AA is ON
+      // (slide 23 = Punchout, slide 24 = Direct Access — already filtered by ingress rules above)
+      {
+        slides: [23, 24],
+        condition: s => s.accountAuthority === true,
+        reason: 'Account Authority enabled — deregister without consolidation policy not applicable',
+      },
+
+      // Rule 6d: Slide 25 — consolidation invitation flow — remove when AA is OFF
+      {
+        slides: [25],
+        condition: s => s.accountAuthority !== true,
+        reason: 'Account Authority not enabled — consolidation invitation slide not applicable',
       },
 
       // ── eProcurement-specific rules (Punchout only) ──────────────────────────
@@ -1070,7 +1132,14 @@
         reason: 'Feature not in scope: Government Store / Section 889',
       },
 
-    ]; // end SLIDE_FILTER_RULES — 20 rules total
+      // Rule 21: Amazon Business Mobile App disabled
+      {
+        slides: [10],
+        condition: s => !s.features.mobileApp,
+        reason: 'Feature not in scope: Amazon Business Mobile App',
+      },
+
+    ]; // end SLIDE_FILTER_RULES — 21 rules total
 
 
     // ── SlideFilterEngine ──────────────────────────────────────────────────────
@@ -1161,6 +1230,13 @@
 
         // CSM name — always remove (internal annotation, not shown to end users)
         map.set('{{CSM}}', '');
+
+        // Consolidation policy label cleanup — remove the badge text from retained slides
+        // The retained slide already shows the correct scenario; the label is redundant.
+        map.set('without consolidation policy', '');
+        map.set('with consolidation policy', '');
+        map.set('without  consolidation policy', '');  // double-space variant in deck
+        map.set('with  consolidation policy', '');     // double-space variant in deck
 
         // Guided Buying Preferred sub-tokens
         if (s.features.guidedBuyingPreferred) {
@@ -1493,6 +1569,42 @@
               fileSubstitutions.push({ token, replacedWith: value, occurrences });
             }
           }
+
+          // ── Orphaned separator cleanup ──────────────────────────────────────
+          // When a token is replaced with an empty string, separators like " / "
+          // that surrounded it can be left behind in the text content of <a:t> elements.
+          // For example: "{{EPRO}} / {{SSO}}" with EPRO removed → " / SSO"
+          // We clean these up by post-processing the text content of each <a:t> node.
+          //
+          // Patterns handled (within a single <a:t> text run):
+          //   "  /  text"  → "text"   (leading separator)
+          //   "text  /  "  → "text"   (trailing separator)
+          //   "  /  "      → ""       (separator only)
+          //   " / text / " → "text"   (both sides)
+          xml = xml.replace(/(<a:t[^>]*>)([\s\S]*?)(<\/a:t>)/g, (match, open, text, close) => {
+            // Remove leading " / " or "/ " patterns (token was before the slash)
+            let cleaned = text.replace(/^\s*\/\s*/g, '');
+            // Remove trailing " / " or " /" patterns (token was after the slash)
+            cleaned = cleaned.replace(/\s*\/\s*$/g, '');
+            // Collapse multiple spaces left by removal
+            cleaned = cleaned.replace(/  +/g, ' ').trim();
+            return open + cleaned + close;
+          });
+
+          // ── Cross-run separator cleanup ─────────────────────────────────────
+          // Handle the case where a token and its separator are in adjacent <a:t> runs.
+          // e.g. run1: "Coupa " → "" (empty after substitution), run2: "/ SSO"
+          // After run1 becomes empty, run2 starts with "/ " which should be removed.
+          // Similarly: run1: "Coupa /", run2: "" (empty) → run1 trailing slash removed.
+          //
+          // Strategy: remove <a:t> elements that are now empty or whitespace-only,
+          // then clean up any runs that now start or end with orphaned " / ".
+          // We do a second pass on the already-cleaned XML.
+          xml = xml.replace(/(<a:t[^>]*>)([\s\S]*?)(<\/a:t>)/g, (match, open, text, close) => {
+            let cleaned = text.replace(/^\s*\/\s*/g, '').replace(/\s*\/\s*$/g, '');
+            cleaned = cleaned.replace(/  +/g, ' ').trim();
+            return open + cleaned + close;
+          });
 
           // Detect any remaining unfilled {{...}} placeholders.
           const remaining = xml.match(PLACEHOLDER_PATTERN) || [];
@@ -2656,6 +2768,7 @@
         // ── Radio groups ────────────────────────────────────────────────────────
         _setRadio('directAccessSso', saved.directAccessSso ? 'on' : 'off');
         _setRadio('punchoutSso',     saved.punchoutSso     ? 'on' : 'off');
+        _setRadio('accountAuthority', saved.accountAuthority ? 'yes' : 'no');
 
         // Feature toggles
         const features = saved.features || {};
@@ -2670,6 +2783,7 @@
         _setRadio('featureTaxExemptions',           features.taxExemptions           ? 'yes' : 'no');
         _setRadio('featureConcurReconciliation',    features.concurReconciliation    ? 'yes' : 'no');
         _setRadio('featureGovernmentStore',         features.governmentStore         ? 'yes' : 'no');
+        _setRadio('featureMobileApp',               features.mobileApp !== false     ? 'yes' : 'no');
 
         // Approvals scope (may be empty string when approvals = no)
         if (features.approvalsScope) {
@@ -2821,6 +2935,7 @@
           ingressPunchout: document.getElementById('ingress-punchout').checked,
           directAccessSso: document.querySelector('input[name="directAccessSso"]:checked')?.value === 'on',
           punchoutSso: document.querySelector('input[name="punchoutSso"]:checked')?.value === 'on',
+          accountAuthority: document.querySelector('input[name="accountAuthority"]:checked')?.value === 'yes',
           eproSystem: document.getElementById('epro-system').value,
           eproSystemCustomName: document.getElementById('epro-custom-name').value.trim(),
           identityProvider: document.getElementById('identity-provider').value.trim(),
@@ -2843,6 +2958,7 @@
             taxExemptions: document.querySelector('input[name="featureTaxExemptions"]:checked')?.value === 'yes',
             concurReconciliation: document.querySelector('input[name="featureConcurReconciliation"]:checked')?.value === 'yes',
             governmentStore: document.querySelector('input[name="featureGovernmentStore"]:checked')?.value === 'yes',
+            mobileApp: document.querySelector('input[name="featureMobileApp"]:checked')?.value === 'yes',
           },
           customerResourceLinks: document.getElementById('customer-resource-links').value.trim(),
           generatePreviewGuide: document.getElementById('generate-preview-guide').checked,
