@@ -1121,35 +1121,75 @@
         const map = new Map();
         const s = formState;
 
-        // Always-present tokens
-        if (s.customerName)      map.set('{{CUSTOMER}}', s.customerName);
-        if (s.categoriesInScope) map.set('{{CATEGORY}}', s.categoriesInScope);
-
-        // Punchout-conditional: eProcurement system name
-        if (s.ingressPunchout) {
-          const eproName = s.eproSystem === 'Custom' ? s.eproSystemCustomName : s.eproSystem;
-          if (eproName) map.set('{{EPRO}}', eproName);
+        // Customer name — the deck uses both {{CUSTOMER}} and {{Customer}} (mixed casing)
+        // Map both variants so either form in the slides gets replaced.
+        if (s.customerName) {
+          map.set('{{CUSTOMER}}', s.customerName);
+          map.set('{{Customer}}', s.customerName);
         }
 
-        // Derived ingress label (always set)
-        map.set('{{EPRO / SSO}}', deriveIngressLabel(s));
+        if (s.categoriesInScope) map.set('{{CATEGORY}}', s.categoriesInScope);
+
+        // eProcurement system name:
+        // - Punchout selected: replace {{EPRO}} with the system name
+        // - Punchout NOT selected (Direct Access only): replace {{EPRO}} with empty string to remove it
+        if (s.ingressPunchout) {
+          const eproName = s.eproSystem === 'Custom' ? s.eproSystemCustomName : s.eproSystem;
+          map.set('{{EPRO}}', eproName || '');
+        } else {
+          // Direct Access only — remove any {{EPRO}} tokens from the slides
+          map.set('{{EPRO}}', '');
+        }
+
+        // Derived ingress label.
+        // NOTE: The deck contains {{EPRO / SS0}} with a zero (not the letter O) — map both variants.
+        const ingressLabel = deriveIngressLabel(s);
+        map.set('{{EPRO / SSO}}', ingressLabel);   // letter O version
+        map.set('{{EPRO / SS0}}', ingressLabel);   // zero version (actual token in deck)
+
+        // SSO standalone token — replace with "SSO" if SSO is in use, otherwise remove
+        const ssoInUse = (s.ingressDirectAccess && s.directAccessSso) || (s.ingressPunchout && s.punchoutSso);
+        map.set('{{SSO}}', ssoInUse ? 'SSO' : '');
 
         // IDP: only Direct Access + SSO ON + no Punchout
         if (s.ingressDirectAccess && s.directAccessSso && !s.ingressPunchout) {
           if (s.identityProvider) map.set('{{IDP}}', s.identityProvider);
+        } else {
+          // Remove {{IDP}} when not applicable
+          map.set('{{IDP}}', '');
         }
-        // When Punchout is selected, {{IDP}} is never substituted (Req 4.11)
+
+        // CSM name — always remove (internal annotation, not shown to end users)
+        map.set('{{CSM}}', '');
 
         // Guided Buying Preferred sub-tokens
         if (s.features.guidedBuyingPreferred) {
           if (s.features.preferredAsins)    map.set('{{Preferred ASINs}}', s.features.preferredAsins);
           if (s.features.preferredListLink) map.set('{{Link to Preferred List}}', s.features.preferredListLink);
+          // Preferred Supplier — remove placeholder text if not provided
+          map.set('{{Preferred Supplier}}', '');
+        } else {
+          map.set('{{Preferred ASINs}}', '');
+          map.set('{{Link to Preferred List}}', '');
+          map.set('{{Preferred Supplier}}', '');
         }
 
         // Approvals scope
         if (s.features.approvals && s.features.approvalsScope) {
           map.set('{{Approvals: Some / All orders}}', s.features.approvalsScope);
+        } else {
+          map.set('{{Approvals: Some / All orders}}', '');
         }
+
+        // Guided Buying policy item placeholders — remove if not provided
+        // These appear on the Restricted/Blocked policy slides
+        map.set('{{Types of Restricted Items 1}}', '');
+        map.set('{{Types of Restricted Items 2}}', '');
+        map.set('{{Types of Blocked Items 1}}', '');
+        map.set('{{Types of Blocked Items 2}}', '');
+
+        // ePro image placeholder — remove (image must be replaced manually)
+        map.set('{{ePro Image}}', '');
 
         // BPO placeholders (slide 69)
         if (s.features.blanketPOs) {
