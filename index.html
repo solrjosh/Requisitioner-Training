@@ -1,0 +1,3172 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Training Deck Planning Hub — Amazon Business ProServe</title>
+
+  <!-- JSZip (vendored for offline use) -->
+  <script src="jszip.min.js"></script>
+  <!-- fast-check (CDN, only active during test runs; guarded with typeof fc checks) -->
+  <script src="https://cdn.jsdelivr.net/npm/fast-check/lib/bundle/fast-check.min.js"></script>
+
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-navy:      #232F3E;
+      --color-orange:    #FF9900;
+      --color-bg:        #F5F5F5;
+      --color-card:      #FFFFFF;
+      --color-border:    #D5D9D9;
+      --color-text:      #0F1111;
+      --color-text-muted:#565959;
+      --color-error:     #CC0C39;
+      --color-success:   #067D62;
+      --color-warning:   #8A6116;
+      --color-warning-bg:#FFF8E7;
+      --radius:          4px;
+      --font:            'Amazon Ember', Arial, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-width: 1024px;
+      line-height: 1.5;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    .hub-header {
+      background: var(--color-navy);
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .hub-header .logo-dot {
+      width: 32px; height: 32px;
+      background: var(--color-orange);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .hub-header h1 { font-size: 1.25rem; font-weight: 700; }
+    .hub-header p  { font-size: 0.85rem; opacity: 0.75; }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    .hub-main {
+      max-width: 900px;
+      margin: 24px auto;
+      padding: 0 24px 48px;
+    }
+
+    /* ── Cards / Sections ─────────────────────────────────── */
+    .form-section {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .form-section__header {
+      background: var(--color-navy);
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .form-section__body {
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ── Form Controls ────────────────────────────────────── */
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .field-group label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    .field-group label .required-star {
+      color: var(--color-error);
+      margin-left: 2px;
+    }
+    .field-group input[type="text"],
+    .field-group input[type="date"],
+    .field-group select,
+    .field-group textarea {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      color: var(--color-text);
+      background: #fff;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .field-group input[type="text"]:focus,
+    .field-group input[type="date"]:focus,
+    .field-group select:focus,
+    .field-group textarea:focus {
+      outline: 2px solid var(--color-orange);
+      outline-offset: 1px;
+      border-color: var(--color-orange);
+    }
+    .field-group textarea { resize: vertical; min-height: 80px; }
+    .field-hint {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+
+    /* ── File Input ───────────────────────────────────────── */
+    .file-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .file-input-wrapper input[type="file"] {
+      font-family: var(--font);
+      font-size: 0.875rem;
+    }
+    .file-name-display {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      font-style: italic;
+    }
+
+    /* ── Toggle Row (Yes/No radio pairs) ──────────────────── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .toggle-row .toggle-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      min-width: 240px;
+    }
+    .radio-group {
+      display: flex;
+      gap: 16px;
+    }
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.875rem;
+      font-weight: 400;
+      cursor: pointer;
+    }
+    .radio-group input[type="radio"] {
+      accent-color: var(--color-orange);
+      width: 16px; height: 16px;
+      cursor: pointer;
+    }
+
+    /* ── Checkbox ─────────────────────────────────────────── */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .checkbox-row input[type="checkbox"] {
+      accent-color: var(--color-orange);
+      width: 16px; height: 16px;
+      cursor: pointer;
+    }
+    .checkbox-row label {
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    /* ── Ingress checkboxes ───────────────────────────────── */
+    .ingress-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .ingress-row .ingress-check-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      min-width: 160px;
+      cursor: pointer;
+    }
+    .ingress-row input[type="checkbox"] {
+      accent-color: var(--color-orange);
+      width: 16px; height: 16px;
+      cursor: pointer;
+    }
+    .ingress-sub-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      min-width: 300px;
+    }
+    .sso-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sso-row .sso-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      min-width: 60px;
+    }
+
+    /* ── Conditional fields (hidden by default) ───────────── */
+    .conditional-field { display: none; }
+    .conditional-field.visible { display: flex; flex-direction: column; gap: 4px; }
+    .conditional-block { display: none; }
+    .conditional-block.visible { display: block; }
+
+    /* ── Warning banner ───────────────────────────────────── */
+    .inline-warning {
+      background: var(--color-warning-bg);
+      border-left: 4px solid #F0A500;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      color: var(--color-warning);
+      display: none;
+    }
+    .inline-warning.visible { display: block; }
+
+    /* ── Validation Summary ───────────────────────────────── */
+    .validation-summary {
+      background: #FFF0F0;
+      border: 1px solid var(--color-error);
+      border-left: 4px solid var(--color-error);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: none;
+    }
+    .validation-summary.visible { display: block; }
+    .validation-summary h3 {
+      font-size: 0.9rem;
+      color: var(--color-error);
+      margin-bottom: 8px;
+    }
+    .validation-summary ul {
+      list-style: disc;
+      padding-left: 20px;
+      font-size: 0.875rem;
+      color: var(--color-error);
+    }
+    .validation-summary ul li { margin-bottom: 4px; }
+
+    /* ── Restore Banner ───────────────────────────────────── */
+    .restore-banner {
+      background: #EAF4FB;
+      border: 1px solid #A8D5F0;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      color: #0A5C8A;
+      display: none;
+      margin-bottom: 12px;
+    }
+    .restore-banner.visible { display: block; }
+
+    /* ── Buttons ──────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s, background 0.15s;
+      text-decoration: none;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary {
+      background: var(--color-orange);
+      color: var(--color-navy);
+    }
+    .btn-primary:hover:not(:disabled) { background: #E68A00; }
+    .btn-secondary {
+      background: var(--color-navy);
+      color: #fff;
+    }
+    .btn-secondary:hover:not(:disabled) { background: #1A2530; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--color-text-muted);
+      border: 1px solid var(--color-border);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--color-bg); }
+
+    .form-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    /* ── Results Section ──────────────────────────────────── */
+    .results-section {
+      display: none;
+      margin-top: 24px;
+    }
+    .results-section.visible { display: block; }
+    .results-header {
+      background: var(--color-success);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    .results-body {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      padding: 20px 16px;
+    }
+    .results-downloads {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .checklist-container {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .checklist-container iframe {
+      width: 100%;
+      min-height: 500px;
+      border: none;
+      display: block;
+    }
+
+    /* ── Error Banner ─────────────────────────────────────── */
+    .error-banner {
+      background: #FFF0F0;
+      border-left: 4px solid var(--color-error);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: none;
+      margin-top: 16px;
+    }
+    .error-banner.visible { display: block; }
+    .error-banner strong { color: var(--color-error); font-size: 0.9rem; }
+    .error-banner p { font-size: 0.85rem; color: var(--color-text); margin-top: 4px; }
+    .error-detail {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      margin-top: 8px;
+      font-family: monospace;
+      background: #f8f8f8;
+      padding: 6px 8px;
+      border-radius: 2px;
+      display: none;
+    }
+    .error-detail.visible { display: block; }
+    .error-toggle {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      padding: 0;
+      margin-top: 4px;
+    }
+
+    /* ── Loading Spinner ──────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(35,47,62,0.3);
+      border-top-color: var(--color-navy);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── Sub-field indentation ────────────────────────────── */
+    .sub-fields {
+      padding-left: 20px;
+      border-left: 3px solid var(--color-orange);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sub-fields.hidden { display: none; }
+
+    /* ── BPO date row ─────────────────────────────────────── */
+    .date-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .date-row .field-group { flex: 1; min-width: 160px; }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="hub-header" role="banner">
+    <div class="logo-dot" aria-hidden="true"></div>
+    <div>
+      <h1>Training Deck Planning Hub</h1>
+      <p>Amazon Business ProServe — Requisitioner Training Deck Generator</p>
+    </div>
+  </header>
+
+  <main class="hub-main" id="main-content">
+
+    <!-- Restore Banner -->
+    <div class="restore-banner" id="restore-banner" role="status" aria-live="polite">
+      Form restored from your last session.
+    </div>
+
+    <form id="hub-form" novalidate aria-label="Training Deck Configuration Form">
+
+      <!-- ── Section 1: Source Deck ──────────────────────────── -->
+      <section class="form-section" aria-labelledby="section-source-heading">
+        <div class="form-section__header" id="section-source-heading">1. Source Deck</div>
+        <div class="form-section__body">
+          <div class="field-group">
+            <label for="source-deck-file">
+              Source Deck PPTX <span class="required-star" aria-hidden="true">*</span>
+            </label>
+            <div class="file-input-wrapper">
+              <input
+                type="file"
+                id="source-deck-file"
+                name="sourceDeckFile"
+                accept=".pptx"
+                aria-required="true"
+                aria-describedby="source-deck-hint"
+              />
+              <span class="file-name-display" id="source-deck-filename" aria-live="polite"></span>
+            </div>
+            <span class="field-hint" id="source-deck-hint">
+              Select the approved <code>Requisitioner Training_December2025.pptx</code> from your local machine.
+              This file is never uploaded or modified.
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Section 2: Customer Details ────────────────────── -->
+      <section class="form-section" aria-labelledby="section-customer-heading">
+        <div class="form-section__header" id="section-customer-heading">2. Customer Details</div>
+        <div class="form-section__body">
+          <div class="field-group">
+            <label for="customer-name">
+              Customer Name <span class="required-star" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="text"
+              id="customer-name"
+              name="customerName"
+              placeholder="e.g. Acme Corporation"
+              aria-required="true"
+              autocomplete="organization"
+            />
+          </div>
+          <div class="field-group">
+            <label for="categories-in-scope">Categories in Scope</label>
+            <input
+              type="text"
+              id="categories-in-scope"
+              name="categoriesInScope"
+              placeholder="e.g. Office Supplies, IT Equipment"
+              aria-describedby="categories-hint"
+            />
+            <span class="field-hint" id="categories-hint">Replaces <code>{{CATEGORY}}</code> in the deck.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Section 3: Ingress Configuration ───────────────── -->
+      <section class="form-section" aria-labelledby="section-ingress-heading">
+        <div class="form-section__header" id="section-ingress-heading">3. Ingress Configuration</div>
+        <div class="form-section__body">
+          <p class="field-hint" id="ingress-required-hint">
+            Select at least one ingress type. <span class="required-star" aria-hidden="true">*</span>
+          </p>
+
+          <!-- Direct Access -->
+          <div class="ingress-row" id="direct-access-row">
+            <label class="ingress-check-label" for="ingress-direct-access">
+              <input
+                type="checkbox"
+                id="ingress-direct-access"
+                name="ingressDirectAccess"
+                aria-describedby="ingress-required-hint"
+              />
+              Direct Access
+            </label>
+            <div class="ingress-sub-fields" id="direct-access-sub" aria-live="polite">
+              <!-- Direct Access SSO toggle (shown when Direct Access checked) -->
+              <div class="conditional-block" id="direct-access-sso-block">
+                <div class="sso-row">
+                  <span class="sso-label" id="da-sso-label">SSO:</span>
+                  <div class="radio-group" role="radiogroup" aria-labelledby="da-sso-label">
+                    <label>
+                      <input type="radio" name="directAccessSso" id="da-sso-off" value="off" checked />
+                      Off
+                    </label>
+                    <label>
+                      <input type="radio" name="directAccessSso" id="da-sso-on" value="on" />
+                      On
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <!-- IDP Name (shown when Direct Access + SSO ON + no Punchout) -->
+              <div class="conditional-field" id="idp-field">
+                <label for="identity-provider">
+                  Identity Provider Name <span class="required-star" aria-hidden="true">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="identity-provider"
+                  name="identityProvider"
+                  placeholder="e.g. Okta, Azure AD, Ping"
+                  aria-required="true"
+                  aria-describedby="idp-hint"
+                />
+                <span class="field-hint" id="idp-hint">Replaces <code>{{IDP}}</code> in the deck.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Punchout -->
+          <div class="ingress-row" id="punchout-row">
+            <label class="ingress-check-label" for="ingress-punchout">
+              <input
+                type="checkbox"
+                id="ingress-punchout"
+                name="ingressPunchout"
+                aria-describedby="ingress-required-hint"
+              />
+              Punchout
+            </label>
+            <div class="ingress-sub-fields" id="punchout-sub" aria-live="polite">
+              <!-- Punchout SSO toggle (shown when Punchout checked) -->
+              <div class="conditional-block" id="punchout-sso-block">
+                <div class="sso-row">
+                  <span class="sso-label" id="po-sso-label">SSO:</span>
+                  <div class="radio-group" role="radiogroup" aria-labelledby="po-sso-label">
+                    <label>
+                      <input type="radio" name="punchoutSso" id="po-sso-off" value="off" checked />
+                      Off
+                    </label>
+                    <label>
+                      <input type="radio" name="punchoutSso" id="po-sso-on" value="on" />
+                      On
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <!-- eProcurement System (shown when Punchout checked) -->
+              <div class="conditional-field" id="epro-field">
+                <label for="epro-system">
+                  eProcurement System <span class="required-star" aria-hidden="true">*</span>
+                </label>
+                <select id="epro-system" name="eproSystem" aria-required="true">
+                  <option value="">— Select —</option>
+                  <option value="Coupa">Coupa</option>
+                  <option value="Ariba">Ariba</option>
+                  <option value="Custom">Custom / Other</option>
+                </select>
+              </div>
+              <!-- Custom ePro Name (shown when Custom selected) -->
+              <div class="conditional-field" id="epro-custom-field">
+                <label for="epro-custom-name">
+                  Custom eProcurement System Name <span class="required-star" aria-hidden="true">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="epro-custom-name"
+                  name="eproSystemCustomName"
+                  placeholder="e.g. SAP Ariba, Oracle iProcurement"
+                  aria-required="true"
+                  aria-describedby="epro-custom-hint"
+                />
+                <span class="field-hint" id="epro-custom-hint">
+                  Replaces <code>{{EPRO}}</code>. Note: slides 49–52 will require manual replacement.
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Section 4: Feature Toggles ─────────────────────── -->
+      <section class="form-section" aria-labelledby="section-features-heading">
+        <div class="form-section__header" id="section-features-heading">4. Feature Toggles</div>
+        <div class="form-section__body">
+
+          <!-- Business Prime -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-business-prime">Business Prime</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-business-prime">
+              <label><input type="radio" name="featureBusinessPrime" value="yes" checked /> Yes</label>
+              <label><input type="radio" name="featureBusinessPrime" value="no" /> No</label>
+            </div>
+          </div>
+
+          <!-- Approvals -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-approvals">Approvals</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-approvals">
+              <label><input type="radio" name="featureApprovals" id="approvals-yes" value="yes" checked /> Yes</label>
+              <label><input type="radio" name="featureApprovals" id="approvals-no" value="no" /> No</label>
+            </div>
+          </div>
+          <!-- Approvals sub-fields -->
+          <div class="sub-fields" id="approvals-sub-fields">
+            <div class="toggle-row">
+              <span class="toggle-label" id="label-approvals-scope">
+                Approval Scope <span class="required-star" aria-hidden="true">*</span>
+              </span>
+              <div class="radio-group" role="radiogroup" aria-labelledby="label-approvals-scope">
+                <label><input type="radio" name="approvalsScope" value="All Orders" checked /> All Orders</label>
+                <label><input type="radio" name="approvalsScope" value="Some Orders" /> Some Orders</label>
+              </div>
+            </div>
+          </div>
+          <!-- Approvals + Punchout-only warning -->
+          <div class="inline-warning" id="approvals-punchout-warning" role="alert">
+            ⚠️ <strong>Note:</strong> Approvals apply only to Direct Access users. Since this customer uses Punchout only,
+            the Approvals slide (71) will still be removed from the deck.
+          </div>
+
+          <!-- Guided Buying Preferred -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-gb-preferred">Guided Buying — Preferred Policy</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-gb-preferred">
+              <label><input type="radio" name="featureGuidedBuyingPreferred" id="gb-preferred-yes" value="yes" /> Yes</label>
+              <label><input type="radio" name="featureGuidedBuyingPreferred" id="gb-preferred-no" value="no" checked /> No</label>
+            </div>
+          </div>
+          <!-- Guided Buying Preferred sub-fields -->
+          <div class="sub-fields hidden" id="gb-preferred-sub-fields">
+            <div class="field-group">
+              <label for="preferred-asins">Preferred ASINs</label>
+              <input type="text" id="preferred-asins" name="preferredAsins"
+                placeholder="e.g. B08N5WRWNW, B07XJ8C8F5"
+                aria-describedby="preferred-asins-hint" />
+              <span class="field-hint" id="preferred-asins-hint">Replaces <code>{{Preferred ASINs}}</code>.</span>
+            </div>
+            <div class="field-group">
+              <label for="preferred-list-link">Link to Preferred List</label>
+              <input type="text" id="preferred-list-link" name="preferredListLink"
+                placeholder="https://..."
+                aria-describedby="preferred-list-hint" />
+              <span class="field-hint" id="preferred-list-hint">Replaces <code>{{Link to Preferred List}}</code>.</span>
+            </div>
+          </div>
+
+          <!-- Guided Buying Restricted -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-gb-restricted">Guided Buying — Restricted Policy</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-gb-restricted">
+              <label><input type="radio" name="featureGuidedBuyingRestricted" value="yes" /> Yes</label>
+              <label><input type="radio" name="featureGuidedBuyingRestricted" value="no" checked /> No</label>
+            </div>
+          </div>
+
+          <!-- Guided Buying Blocked -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-gb-blocked">Guided Buying — Blocked Policy</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-gb-blocked">
+              <label><input type="radio" name="featureGuidedBuyingBlocked" value="yes" /> Yes</label>
+              <label><input type="radio" name="featureGuidedBuyingBlocked" value="no" checked /> No</label>
+            </div>
+          </div>
+
+          <!-- 3-Way Match / Receiving -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-three-way-match">3-Way Match / Receiving</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-three-way-match">
+              <label><input type="radio" name="featureThreeWayMatch" value="yes" checked /> Yes</label>
+              <label><input type="radio" name="featureThreeWayMatch" value="no" /> No</label>
+            </div>
+          </div>
+
+          <!-- Business Giving -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-business-giving">Business Giving</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-business-giving">
+              <label><input type="radio" name="featureBusinessGiving" value="yes" checked /> Yes</label>
+              <label><input type="radio" name="featureBusinessGiving" value="no" /> No</label>
+            </div>
+          </div>
+
+          <!-- Blanket Purchase Orders -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-blanket-pos">Blanket Purchase Orders (BPOs)</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-blanket-pos">
+              <label><input type="radio" name="featureBlanketPOs" id="bpo-yes" value="yes" /> Yes</label>
+              <label><input type="radio" name="featureBlanketPOs" id="bpo-no" value="no" checked /> No</label>
+            </div>
+          </div>
+          <!-- BPO sub-fields -->
+          <div class="sub-fields hidden" id="bpo-sub-fields">
+            <div class="field-group">
+              <label for="bpo-budget-amount">BPO Budget Amount</label>
+              <input type="text" id="bpo-budget-amount" name="bpoBudgetAmount"
+                placeholder="e.g. $50,000"
+                aria-describedby="bpo-amount-hint" />
+              <span class="field-hint" id="bpo-amount-hint">Replaces <code>{{BPO_BUDGET_AMOUNT}}</code>.</span>
+            </div>
+            <div class="date-row">
+              <div class="field-group">
+                <label for="bpo-period-start">Budget Period Start</label>
+                <input type="date" id="bpo-period-start" name="bpoBudgetPeriodStart"
+                  aria-describedby="bpo-start-hint" />
+                <span class="field-hint" id="bpo-start-hint">Replaces <code>{{BPO_PERIOD_START}}</code>.</span>
+              </div>
+              <div class="field-group">
+                <label for="bpo-period-end">Budget Period End</label>
+                <input type="date" id="bpo-period-end" name="bpoBudgetPeriodEnd"
+                  aria-describedby="bpo-end-hint" />
+                <span class="field-hint" id="bpo-end-hint">Replaces <code>{{BPO_PERIOD_END}}</code>.</span>
+              </div>
+            </div>
+            <div class="field-group">
+              <label for="bpo-user-groups">Applicable User Groups</label>
+              <input type="text" id="bpo-user-groups" name="bpoUserGroups"
+                placeholder="e.g. Finance Team, Procurement"
+                aria-describedby="bpo-groups-hint" />
+              <span class="field-hint" id="bpo-groups-hint">Replaces <code>{{BPO_USER_GROUPS}}</code>.</span>
+            </div>
+          </div>
+
+          <!-- Tax Exemptions -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-tax-exemptions">Tax Exemptions</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-tax-exemptions">
+              <label><input type="radio" name="featureTaxExemptions" value="yes" checked /> Yes</label>
+              <label><input type="radio" name="featureTaxExemptions" value="no" /> No</label>
+            </div>
+          </div>
+
+          <!-- Concur Reconciliation -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-concur">Concur Reconciliation</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-concur">
+              <label><input type="radio" name="featureConcurReconciliation" value="yes" /> Yes</label>
+              <label><input type="radio" name="featureConcurReconciliation" value="no" checked /> No</label>
+            </div>
+          </div>
+
+          <!-- Government Store / Section 889 -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-gov-store">Government Store / Section 889</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-gov-store">
+              <label><input type="radio" name="featureGovernmentStore" value="yes" /> Yes</label>
+              <label><input type="radio" name="featureGovernmentStore" value="no" checked /> No</label>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Section 5: Customer Resources ───────────────────── -->
+      <section class="form-section" aria-labelledby="section-resources-heading">
+        <div class="form-section__header" id="section-resources-heading">5. Customer Resources</div>
+        <div class="form-section__body">
+          <div class="field-group">
+            <label for="customer-resource-links">Resource Links (Slide 97)</label>
+            <textarea
+              id="customer-resource-links"
+              name="customerResourceLinks"
+              placeholder="Paste customer-specific resource links here (one per line)"
+              aria-describedby="resources-hint"
+            ></textarea>
+            <span class="field-hint" id="resources-hint">Replaces <code>{{CUSTOMER_RESOURCES}}</code> on Slide 97.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Section 6: Output Options ──────────────────────── -->
+      <section class="form-section" aria-labelledby="section-output-heading">
+        <div class="form-section__header" id="section-output-heading">6. Output Options</div>
+        <div class="form-section__body">
+          <div class="checkbox-row">
+            <input type="checkbox" id="generate-preview-guide" name="generatePreviewGuide" />
+            <label for="generate-preview-guide">
+              Generate HTML Preview Guide
+              <span class="field-hint" style="font-weight:400; margin-left:6px;">
+                (optional — a lightweight HTML summary of the training deck for trainer reference)
+              </span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Validation Summary ──────────────────────────────── -->
+      <div
+        class="validation-summary"
+        id="validation-summary"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        tabindex="-1"
+      >
+        <h3>⚠ Please fix the following before generating:</h3>
+        <ul id="validation-error-list"></ul>
+      </div>
+
+      <!-- ── Form Actions ────────────────────────────────────── -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" id="clear-form-btn" aria-label="Clear all form data">
+          🗑 Clear Form
+        </button>
+        <button type="button" class="btn btn-primary" id="generate-btn" aria-label="Generate customized training deck">
+          ⚡ Generate Deck
+        </button>
+      </div>
+
+    </form>
+
+    <!-- ── Error Banner ────────────────────────────────────── -->
+    <div class="error-banner" id="error-banner" role="alert" aria-live="assertive">
+      <strong id="error-banner-title">An error occurred</strong>
+      <p id="error-banner-message"></p>
+      <button class="error-toggle" id="error-detail-toggle" aria-expanded="false" aria-controls="error-detail-text">
+        Show technical details
+      </button>
+      <div class="error-detail" id="error-detail-text" role="region" aria-label="Technical error details"></div>
+    </div>
+
+    <!-- ── Results Section ────────────────────────────────────── -->
+    <section class="results-section" id="results-section" aria-labelledby="results-heading" aria-live="polite">
+      <div class="results-header" id="results-heading">✅ Deck generated successfully</div>
+      <div class="results-body">
+        <div class="results-downloads" id="results-downloads">
+          <button type="button" class="btn btn-secondary" id="download-pptx-btn">
+            ⬇ Download PPTX
+          </button>
+          <button type="button" class="btn btn-secondary" id="download-checklist-btn">
+            ⬇ Download Checklist
+          </button>
+          <button type="button" class="btn btn-secondary" id="download-preview-btn" style="display:none;">
+            ⬇ Download Preview Guide
+          </button>
+        </div>
+        <div class="checklist-container" id="checklist-container">
+          <!-- Inline checklist rendered here after generation -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <script>
+    'use strict';
+
+    // ── Constants ──────────────────────────────────────────────────────────────
+
+    /** localStorage key for persisting form state between sessions. */
+    const STORAGE_KEY = 'training-deck-hub-state';
+
+    /**
+     * Slides that require manual CSM action (screenshot replacement) before presenting.
+     * These slides are flagged in the Slide Checklist but are NOT automatically removed.
+     * Note: slides 45, 46, 47 may also be removed by feature toggle rules; if removed,
+     * they will not appear in the manual tasks section of the checklist.
+     */
+    const MANUAL_TASK_SLIDES = new Set([33, 45, 46, 47, 82, 83]);
+
+    /**
+     * Declarative rule table for SlideFilterEngine.
+     * Each rule has:
+     *   slides    {number[]}  — original 1-based slide numbers affected
+     *   condition {Function}  — (formState) => boolean; true = remove these slides
+     *   reason    {string}    — human-readable reason for the Slide Checklist
+     *
+     * Rules are evaluated in order; the removal set is the union of all matching rules.
+     * Rule conflicts (same slide in multiple rules) are resolved by union semantics:
+     * a slide is removed if ANY applicable rule fires.
+     *
+     * Total: 20 rules (2 ingress-based + 4 registration scenario + 3 eProcurement + 11 feature toggle)
+     */
+    const SLIDE_FILTER_RULES = [
+
+      // ── Ingress-based rules ──────────────────────────────────────────────────
+
+      // Rule 1: Direct Access only — remove all Punchout-specific slides
+      {
+        slides: [49, 50, 51, 52, 55, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
+        condition: s => s.ingressDirectAccess && !s.ingressPunchout,
+        reason: 'Direct Access only — Punchout slides not applicable',
+      },
+
+      // Rule 2: Punchout only — remove the Direct Access-specific slide
+      {
+        slides: [68],
+        condition: s => s.ingressPunchout && !s.ingressDirectAccess,
+        reason: 'Punchout only — Direct Access slide not applicable',
+      },
+
+      // ── Registration scenario slides (15–18) ────────────────────────────────
+      // Each slide is KEPT only when its specific ingress×SSO condition is met.
+      // Expressed as: remove if the condition is NOT met.
+
+      // Rule 3: Slide 15 — Punchout without SSO registration scenario
+      {
+        slides: [15],
+        condition: s => !(s.ingressPunchout && !s.punchoutSso),
+        reason: 'Registration scenario: Punchout without SSO not selected',
+      },
+
+      // Rule 4: Slide 16 — Punchout with SSO registration scenario
+      {
+        slides: [16],
+        condition: s => !(s.ingressPunchout && s.punchoutSso),
+        reason: 'Registration scenario: Punchout with SSO not selected',
+      },
+
+      // Rule 5: Slide 17 — Direct Access without SSO registration scenario
+      {
+        slides: [17],
+        condition: s => !(s.ingressDirectAccess && !s.directAccessSso),
+        reason: 'Registration scenario: Direct Access without SSO not selected',
+      },
+
+      // Rule 6: Slide 18 — Direct Access with SSO registration scenario
+      {
+        slides: [18],
+        condition: s => !(s.ingressDirectAccess && s.directAccessSso),
+        reason: 'Registration scenario: Direct Access with SSO not selected',
+      },
+
+      // ── eProcurement-specific rules (Punchout only) ──────────────────────────
+
+      // Rule 7: Ariba selected — remove Coupa slides 49–50
+      {
+        slides: [49, 50],
+        condition: s => s.ingressPunchout && s.eproSystem === 'Ariba',
+        reason: 'eProcurement: Ariba selected — Coupa slides not applicable',
+      },
+
+      // Rule 8: Coupa selected — remove Ariba slides 51–52
+      {
+        slides: [51, 52],
+        condition: s => s.ingressPunchout && s.eproSystem === 'Coupa',
+        reason: 'eProcurement: Coupa selected — Ariba slides not applicable',
+      },
+
+      // Rule 9: Custom eProcurement — remove all standard ePro slides 49–52
+      {
+        slides: [49, 50, 51, 52],
+        condition: s => s.ingressPunchout && s.eproSystem === 'Custom',
+        reason: 'eProcurement: Custom system — standard ePro slides require manual replacement',
+      },
+
+      // ── Feature toggle rules ─────────────────────────────────────────────────
+
+      // Rule 10: Business Prime disabled
+      {
+        slides: [6],
+        condition: s => !s.features.businessPrime,
+        reason: 'Feature not in scope: Business Prime',
+      },
+
+      // Rule 11: Approvals disabled
+      {
+        slides: [71],
+        condition: s => !s.features.approvals,
+        reason: 'Feature not in scope: Approvals',
+      },
+
+      // Rule 12: Guided Buying Preferred Policy disabled
+      {
+        slides: [45],
+        condition: s => !s.features.guidedBuyingPreferred,
+        reason: 'Feature not in scope: Guided Buying Preferred Policy',
+      },
+
+      // Rule 13: Guided Buying Restricted Policy disabled
+      {
+        slides: [46],
+        condition: s => !s.features.guidedBuyingRestricted,
+        reason: 'Feature not in scope: Guided Buying Restricted Policy',
+      },
+
+      // Rule 14: Guided Buying Blocked Policy disabled
+      {
+        slides: [47],
+        condition: s => !s.features.guidedBuyingBlocked,
+        reason: 'Feature not in scope: Guided Buying Blocked Policy',
+      },
+
+      // Rule 15: 3-Way Match / Receiving disabled
+      {
+        slides: [77, 78, 79, 80],
+        condition: s => !s.features.threeWayMatch,
+        reason: 'Feature not in scope: 3-Way Match / Receiving',
+      },
+
+      // Rule 16: Business Giving disabled
+      {
+        slides: [73, 74, 75, 76],
+        condition: s => !s.features.businessGiving,
+        reason: 'Feature not in scope: Business Giving',
+      },
+
+      // Rule 17: Blanket Purchase Orders disabled
+      {
+        slides: [69],
+        condition: s => !s.features.blanketPOs,
+        reason: 'Feature not in scope: Blanket Purchase Orders',
+      },
+
+      // Rule 18: Tax Exemptions disabled
+      {
+        slides: [70],
+        condition: s => !s.features.taxExemptions,
+        reason: 'Feature not in scope: Tax Exemptions',
+      },
+
+      // Rule 19: Concur Reconciliation disabled
+      {
+        slides: [88, 89, 90],
+        condition: s => !s.features.concurReconciliation,
+        reason: 'Feature not in scope: Concur Reconciliation',
+      },
+
+      // Rule 20: Government Store / Section 889 disabled
+      {
+        slides: [35, 36, 37, 38],
+        condition: s => !s.features.governmentStore,
+        reason: 'Feature not in scope: Government Store / Section 889',
+      },
+
+    ]; // end SLIDE_FILTER_RULES — 20 rules total
+
+
+    // ── SlideFilterEngine ──────────────────────────────────────────────────────
+    // computeRemovals(formState) → Set<number>
+    // Pure function — no side effects.
+
+    const SlideFilterEngine = (() => {
+      /**
+       * Compute the set of original slide numbers to remove from the source deck.
+       * Evaluates every rule in SLIDE_FILTER_RULES and unions all matching slide sets.
+       * Slide 9 ("Accessing Amazon Business") is always retained.
+       *
+       * @param {Object} formState
+       * @returns {Set<number>} Set of 1-based original slide numbers to remove
+       */
+      function computeRemovals(formState) {
+        const removalSet = new Set();
+        for (const rule of SLIDE_FILTER_RULES) {
+          if (rule.condition(formState)) {
+            for (const slideNum of rule.slides) {
+              removalSet.add(slideNum);
+            }
+          }
+        }
+        // Slide 9 is always retained regardless of any rule
+        removalSet.delete(9);
+        return removalSet;
+      }
+
+      return { computeRemovals };
+    })();
+
+
+    // ── PlaceholderEngine ──────────────────────────────────────────────────────
+    // buildTokenMap(formState) → Map<string, string>
+    // deriveIngressLabel(formState) → string
+    // Pure functions — no side effects.
+
+    const PlaceholderEngine = (() => {
+      /**
+       * Build the token-to-value map for placeholder substitution.
+       * Tokens with no applicable value are omitted (detected as unfilled during substitution).
+       *
+       * @param {Object} formState
+       * @returns {Map<string, string>}
+       */
+      function buildTokenMap(formState) {
+        const map = new Map();
+        const s = formState;
+
+        // Always-present tokens
+        if (s.customerName)      map.set('{{CUSTOMER}}', s.customerName);
+        if (s.categoriesInScope) map.set('{{CATEGORY}}', s.categoriesInScope);
+
+        // Punchout-conditional: eProcurement system name
+        if (s.ingressPunchout) {
+          const eproName = s.eproSystem === 'Custom' ? s.eproSystemCustomName : s.eproSystem;
+          if (eproName) map.set('{{EPRO}}', eproName);
+        }
+
+        // Derived ingress label (always set)
+        map.set('{{EPRO / SSO}}', deriveIngressLabel(s));
+
+        // IDP: only Direct Access + SSO ON + no Punchout
+        if (s.ingressDirectAccess && s.directAccessSso && !s.ingressPunchout) {
+          if (s.identityProvider) map.set('{{IDP}}', s.identityProvider);
+        }
+        // When Punchout is selected, {{IDP}} is never substituted (Req 4.11)
+
+        // Guided Buying Preferred sub-tokens
+        if (s.features.guidedBuyingPreferred) {
+          if (s.features.preferredAsins)    map.set('{{Preferred ASINs}}', s.features.preferredAsins);
+          if (s.features.preferredListLink) map.set('{{Link to Preferred List}}', s.features.preferredListLink);
+        }
+
+        // Approvals scope
+        if (s.features.approvals && s.features.approvalsScope) {
+          map.set('{{Approvals: Some / All orders}}', s.features.approvalsScope);
+        }
+
+        // BPO placeholders (slide 69)
+        if (s.features.blanketPOs) {
+          if (s.features.bpoBudgetAmount)      map.set('{{BPO_BUDGET_AMOUNT}}', s.features.bpoBudgetAmount);
+          if (s.features.bpoBudgetPeriodStart) map.set('{{BPO_PERIOD_START}}', s.features.bpoBudgetPeriodStart);
+          if (s.features.bpoBudgetPeriodEnd)   map.set('{{BPO_PERIOD_END}}', s.features.bpoBudgetPeriodEnd);
+          if (s.features.bpoUserGroups)        map.set('{{BPO_USER_GROUPS}}', s.features.bpoUserGroups);
+        }
+
+        // Customer resource links (slide 97)
+        if (s.customerResourceLinks) map.set('{{CUSTOMER_RESOURCES}}', s.customerResourceLinks);
+
+        return map;
+      }
+
+      /**
+       * Derive the human-readable ingress label for {{EPRO / SSO}} substitution.
+       * Examples:
+       *   Punchout (Coupa) + SSO → "Coupa + SSO"
+       *   Direct Access, no SSO → "Direct Access"
+       *   Both: Coupa + SSO and Direct Access + SSO → "Coupa + SSO / Direct Access + SSO"
+       *
+       * @param {Object} s - formState
+       * @returns {string}
+       */
+      function deriveIngressLabel(s) {
+        const parts = [];
+        if (s.ingressPunchout) {
+          const eproName = s.eproSystem === 'Custom'
+            ? (s.eproSystemCustomName || 'Custom ePro')
+            : (s.eproSystem || 'Punchout');
+          parts.push(s.punchoutSso ? `${eproName} + SSO` : eproName);
+        }
+        if (s.ingressDirectAccess) {
+          parts.push(s.directAccessSso ? 'Direct Access + SSO' : 'Direct Access');
+        }
+        return parts.join(' / ') || 'Direct Access';
+      }
+
+      return { buildTokenMap, deriveIngressLabel };
+    })();
+
+
+    // ── PptxManipulator ────────────────────────────────────────────────────────
+    // removeSlides(zip, removalSet) → slideManifest
+    // substituteTokens(zip, tokenMap, retainedSlideFiles) → SubstitutionRecord[]
+    // Stateful — operates on a JSZip instance.
+
+    const PptxManipulator = (() => {
+
+      // ── Helpers ──────────────────────────────────────────────────────────────
+
+      /**
+       * Escape a string for safe insertion into XML text content or attribute values.
+       * Order matters: & must be escaped first to avoid double-escaping.
+       */
+      function escapeXml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+      }
+
+      /**
+       * Escape a string for use as a literal pattern inside a RegExp constructor.
+       */
+      function escapeRegex(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }
+
+      /**
+       * Extract the title text from a slide's XML.
+       * Looks for a <p:ph type="title"> or <p:ph type="ctrTitle"> placeholder shape,
+       * then collects all <a:t> text runs within that shape.
+       * Falls back to an empty string if no title placeholder is found.
+       */
+      function extractSlideTitle(xml) {
+        // Find a <p:sp> that contains a title or ctrTitle placeholder
+        // We use a regex approach to avoid DOMParser namespace issues in all browsers.
+        const spPattern = /<p:sp[\s\S]*?<\/p:sp>/g;
+        let match;
+        while ((match = spPattern.exec(xml)) !== null) {
+          const spXml = match[0];
+          if (/<p:ph[^>]+type="(?:title|ctrTitle)"/.test(spXml)) {
+            // Collect all <a:t>...</a:t> text runs within this shape
+            const textRuns = [];
+            const atPattern = /<a:t[^>]*>([\s\S]*?)<\/a:t>/g;
+            let atMatch;
+            while ((atMatch = atPattern.exec(spXml)) !== null) {
+              textRuns.push(atMatch[1]);
+            }
+            const title = textRuns.join('').trim();
+            if (title) return title;
+          }
+        }
+        return '';
+      }
+
+      /**
+       * Look up the removal reason for a given original slide number by scanning
+       * SLIDE_FILTER_RULES for the first rule whose slides array includes that number.
+       * Returns null if the slide is not in any rule (should not happen for removed slides,
+       * but is a safe fallback).
+       */
+      function getRuleReason(slideNumber) {
+        for (const rule of SLIDE_FILTER_RULES) {
+          if (rule.slides.includes(slideNumber)) {
+            return rule.reason;
+          }
+        }
+        return null;
+      }
+
+      // ── Task 5.1: removeSlides ────────────────────────────────────────────────
+
+      /**
+       * Remove slides from a JSZip PPTX archive and return a SlideManifest.
+       *
+       * @param {JSZip} zip        - Loaded JSZip instance of the PPTX file.
+       * @param {Set<number>} removalSet - 1-based original slide numbers to remove.
+       * @returns {Promise<SlideRecord[]>} SlideManifest ordered by original slide number.
+       */
+      async function removeSlides(zip, removalSet) {
+        // ── Phase 1: Parse slide order from presentation.xml ──────────────────
+
+        const presentationXmlText = await zip.file('ppt/presentation.xml').async('text');
+
+        // Use DOMParser to extract the ordered <p:sldId> list.
+        // We need the r:id attribute from each <p:sldId> element.
+        const parser = new DOMParser();
+        const presentationDoc = parser.parseFromString(presentationXmlText, 'application/xml');
+
+        // Collect all <p:sldId> elements in document order.
+        // getElementsByTagNameNS is the safest cross-browser approach for namespaced elements.
+        const sldIdElements = Array.from(
+          presentationDoc.getElementsByTagNameNS(
+            'http://schemas.openxmlformats.org/presentationml/2006/main',
+            'sldId'
+          )
+        );
+
+        // Extract the r:id attribute (namespace: http://schemas.openxmlformats.org/officeDocument/2006/relationships)
+        const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+        const orderedRIds = sldIdElements.map(el => el.getAttributeNS(R_NS, 'id'));
+
+        // ── Phase 2: Build rId → slideFilePath map from presentation.xml.rels ──
+
+        const relsText = await zip.file('ppt/_rels/presentation.xml.rels').async('text');
+
+        // Use regex to parse the .rels file — simpler and avoids namespace issues.
+        // Each Relationship looks like:
+        //   <Relationship Id="rId2" Type="...slide" Target="../slides/slide1.xml"/>
+        const rIdToFile = {};
+        const relPattern = /<Relationship[^>]+Id="([^"]+)"[^>]+Type="[^"]*\/slide"[^>]+Target="([^"]+)"[^>]*\/?>/g;
+        let relMatch;
+        while ((relMatch = relPattern.exec(relsText)) !== null) {
+          const rId = relMatch[1];
+          let target = relMatch[2];
+          // Normalize relative path: "../slides/slide1.xml" → "ppt/slides/slide1.xml"
+          if (target.startsWith('../')) {
+            target = 'ppt/' + target.slice(3);
+          } else if (!target.startsWith('ppt/')) {
+            target = 'ppt/' + target;
+          }
+          rIdToFile[rId] = target;
+        }
+
+        // Build the ordered slide file array (index 0 = original slide 1).
+        const orderedSlideFiles = orderedRIds.map(rId => rIdToFile[rId]).filter(Boolean);
+
+        // ── Phase 3: Remove slides from ZIP and update XML manifests ─────────
+
+        // Read the three XML files we need to mutate as raw text (regex approach).
+        let presXml = presentationXmlText;
+        let presRelsXml = relsText;
+        let contentTypesXml = await zip.file('[Content_Types].xml').async('text');
+
+        for (const originalNumber of removalSet) {
+          const slideFile = orderedSlideFiles[originalNumber - 1];
+          if (!slideFile) continue; // safety guard
+
+          // 1. Remove the slide XML file from the ZIP.
+          zip.remove(slideFile);
+
+          // 2. Remove the slide .rels file from the ZIP (if it exists).
+          //    e.g. ppt/slides/slide1.xml → ppt/slides/_rels/slide1.xml.rels
+          const slideRelsPath = slideFile.replace(
+            /ppt\/slides\/([^/]+)$/,
+            'ppt/slides/_rels/$1.rels'
+          );
+          if (zip.file(slideRelsPath)) {
+            zip.remove(slideRelsPath);
+          }
+
+          // 3. Remove the <p:sldId> entry from presentation.xml.
+          //    Find the rId for this slide file (reverse lookup).
+          const rId = orderedRIds[originalNumber - 1];
+          if (rId) {
+            // Match the specific <p:sldId> element with this r:id attribute.
+            // The element may be self-closing or have whitespace variations.
+            const sldIdRegex = new RegExp(
+              `\\s*<p:sldId[^>]+r:id="${escapeRegex(rId)}"[^>]*/?>`,
+              'g'
+            );
+            presXml = presXml.replace(sldIdRegex, '');
+
+            // 4. Remove the <Relationship> entry from presentation.xml.rels.
+            const relRegex = new RegExp(
+              `\\s*<Relationship[^>]+Id="${escapeRegex(rId)}"[^>]*/?>`,
+              'g'
+            );
+            presRelsXml = presRelsXml.replace(relRegex, '');
+          }
+
+          // 5. Remove the <Override> entry from [Content_Types].xml.
+          //    PartName uses a leading slash: "/ppt/slides/slide1.xml"
+          const partName = '/' + slideFile;
+          const overrideRegex = new RegExp(
+            `\\s*<Override[^>]+PartName="${escapeRegex(partName)}"[^>]*/?>`,
+            'g'
+          );
+          contentTypesXml = contentTypesXml.replace(overrideRegex, '');
+        }
+
+        // Write the three modified XML files back to the ZIP.
+        zip.file('ppt/presentation.xml', presXml);
+        zip.file('ppt/_rels/presentation.xml.rels', presRelsXml);
+        zip.file('[Content_Types].xml', contentTypesXml);
+
+        // ── Phase 4: Extract titles and build SlideManifest ───────────────────
+
+        let outputNumber = 0;
+        const slideManifest = [];
+
+        for (let i = 0; i < orderedSlideFiles.length; i++) {
+          const originalNumber = i + 1;
+          const slideFile = orderedSlideFiles[i];
+          const removed = removalSet.has(originalNumber);
+
+          let title = '';
+          if (!removed && slideFile && zip.file(slideFile)) {
+            try {
+              const slideXml = await zip.file(slideFile).async('text');
+              title = extractSlideTitle(slideXml);
+            } catch (_) {
+              // If we can't read the slide, fall through to the default title.
+            }
+          }
+          if (!title) {
+            title = `Slide ${originalNumber}`;
+          }
+
+          const record = {
+            originalNumber,
+            outputNumber: removed ? null : ++outputNumber,
+            slideFile,
+            title,
+            removed,
+            removalReason: removed ? getRuleReason(originalNumber) : null,
+            isManualTask: !removed && MANUAL_TASK_SLIDES.has(originalNumber),
+            substitutions: [],
+            unfilledPlaceholders: [],
+          };
+
+          slideManifest.push(record);
+        }
+
+        return slideManifest;
+      }
+
+      // ── Task 5.2: substituteTokens ────────────────────────────────────────────
+
+      /**
+       * Perform token substitution across all retained slide XML files.
+       *
+       * @param {JSZip} zip                    - Loaded JSZip instance (already mutated by removeSlides).
+       * @param {Map<string,string>} tokenMap  - Token → replacement value map.
+       * @param {string[]} retainedSlideFiles  - Array of slide file paths to process.
+       * @returns {Promise<Array>} Array of SubstitutionRecord objects, one per slide file.
+       */
+      async function substituteTokens(zip, tokenMap, retainedSlideFiles) {
+        const PLACEHOLDER_PATTERN = /\{\{[^}]+\}\}/g;
+        const results = [];
+
+        for (const filePath of retainedSlideFiles) {
+          const zipEntry = zip.file(filePath);
+          if (!zipEntry) continue;
+
+          let xml = await zipEntry.async('text');
+          const fileSubstitutions = [];
+
+          // Apply each token replacement in turn.
+          for (const [token, value] of tokenMap) {
+            const regex = new RegExp(escapeRegex(token), 'g');
+            const matches = xml.match(regex);
+            const occurrences = matches ? matches.length : 0;
+            if (occurrences > 0) {
+              xml = xml.replace(regex, escapeXml(value));
+              fileSubstitutions.push({ token, replacedWith: value, occurrences });
+            }
+          }
+
+          // Detect any remaining unfilled {{...}} placeholders.
+          const remaining = xml.match(PLACEHOLDER_PATTERN) || [];
+          const unfilledSet = new Set(remaining);
+
+          // Write the modified XML back to the ZIP.
+          zip.file(filePath, xml);
+
+          results.push({
+            filePath,
+            substitutions: fileSubstitutions,
+            unfilledPlaceholders: [...unfilledSet],
+          });
+        }
+
+        return results;
+      }
+
+      return { removeSlides, substituteTokens, escapeXml, escapeRegex, extractSlideTitle };
+    })();
+
+
+    // ── ChecklistGenerator ─────────────────────────────────────────────────────
+    // build(formState, removalSet, substitutions, slideManifest) → string (HTML)
+    // Pure function.
+
+    const ChecklistGenerator = (() => {
+
+      /**
+       * Merge substitution records (from PptxManipulator.substituteTokens) into
+       * the slideManifest by matching filePath → slideFile.
+       *
+       * @param {Array} slideManifest
+       * @param {Array} substitutions  — Array<{ filePath, substitutions, unfilledPlaceholders }>
+       * @returns {Array} enriched manifest (new array, originals not mutated)
+       */
+      function mergeSubstitutions(slideManifest, substitutions) {
+        // Build a lookup: slideFile → { substitutions, unfilledPlaceholders }
+        const subMap = new Map();
+        for (const rec of (substitutions || [])) {
+          subMap.set(rec.filePath, rec);
+        }
+        return slideManifest.map(slide => {
+          const sub = subMap.get(slide.slideFile);
+          return Object.assign({}, slide, {
+            substitutions: (sub && sub.substitutions) ? sub.substitutions : (slide.substitutions || []),
+            unfilledPlaceholders: (sub && sub.unfilledPlaceholders) ? sub.unfilledPlaceholders : (slide.unfilledPlaceholders || []),
+          });
+        });
+      }
+
+      /** Escape HTML special characters for safe inline rendering. */
+      function esc(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      /** Format today's date as YYYY-MM-DD. */
+      function formatDate(d) {
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      }
+
+      /**
+       * Build the "Included Slides" table section.
+       * Columns: Output #, Original #, Title, Substitutions Made, Manual Task
+       */
+      function buildIncludedTable(included) {
+        if (included.length === 0) {
+          return '<p style="color:#565959;font-style:italic;">No slides included.</p>';
+        }
+
+        const rows = included.map(slide => {
+          // Substitutions cell
+          let subCell = '<span style="color:#565959;font-size:0.8rem;">—</span>';
+          if (slide.substitutions && slide.substitutions.length > 0) {
+            const items = slide.substitutions.map(s =>
+              `<li><code style="background:#f0f0f0;padding:1px 4px;border-radius:2px;">${esc(s.token)}</code> → <strong>${esc(s.replacedWith)}</strong> <span style="color:#565959;">(×${s.occurrences})</span></li>`
+            ).join('');
+            subCell = `<ul style="margin:0;padding-left:16px;font-size:0.8rem;">${items}</ul>`;
+          }
+
+          // Unfilled placeholders warning
+          if (slide.unfilledPlaceholders && slide.unfilledPlaceholders.length > 0) {
+            const unfilled = slide.unfilledPlaceholders.map(p =>
+              `<li style="color:#8A6116;"><code style="background:#FFF8E7;padding:1px 4px;border-radius:2px;">${esc(p)}</code> <em>(unfilled)</em></li>`
+            ).join('');
+            subCell += `<ul style="margin:4px 0 0;padding-left:16px;font-size:0.8rem;">${unfilled}</ul>`;
+          }
+
+          // Manual task badge
+          const manualCell = slide.isManualTask
+            ? '<span style="background:#FFF8E7;color:#8A6116;border:1px solid #F0A500;border-radius:3px;padding:2px 7px;font-size:0.75rem;font-weight:700;white-space:nowrap;">⚠️ Manual Task</span>'
+            : '<span style="color:#565959;font-size:0.8rem;">—</span>';
+
+          const rowBg = slide.isManualTask ? 'background:#FFFDF0;' : '';
+
+          return `
+            <tr style="${rowBg}">
+              <td style="text-align:center;font-weight:700;color:#232F3E;">${esc(slide.outputNumber)}</td>
+              <td style="text-align:center;color:#565959;">${esc(slide.originalNumber)}</td>
+              <td>${esc(slide.title || `Slide ${slide.originalNumber}`)}</td>
+              <td>${subCell}</td>
+              <td style="text-align:center;">${manualCell}</td>
+            </tr>`;
+        }).join('');
+
+        return `
+          <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+            <thead>
+              <tr style="background:#232F3E;color:#fff;">
+                <th style="padding:8px 10px;text-align:center;width:60px;">Out #</th>
+                <th style="padding:8px 10px;text-align:center;width:70px;">Orig #</th>
+                <th style="padding:8px 10px;text-align:left;">Title</th>
+                <th style="padding:8px 10px;text-align:left;">Substitutions Made</th>
+                <th style="padding:8px 10px;text-align:center;width:120px;">Manual Task</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>`;
+      }
+
+      /**
+       * Build the "Removed Slides" table section.
+       * Columns: Original #, Reason
+       */
+      function buildRemovedTable(removed) {
+        if (removed.length === 0) {
+          return '<p style="color:#565959;font-style:italic;">No slides were removed.</p>';
+        }
+
+        const rows = removed.map(slide => `
+          <tr>
+            <td style="text-align:center;font-weight:700;color:#565959;">${esc(slide.originalNumber)}</td>
+            <td style="color:#565959;">${esc(slide.removalReason || 'Removed')}</td>
+          </tr>`
+        ).join('');
+
+        return `
+          <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+            <thead>
+              <tr style="background:#232F3E;color:#fff;">
+                <th style="padding:8px 10px;text-align:center;width:80px;">Original #</th>
+                <th style="padding:8px 10px;text-align:left;">Reason for Removal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>`;
+      }
+
+      /**
+       * Build the "Manual Tasks Required" section.
+       * Lists retained slides that require screenshot replacement.
+       */
+      function buildManualTaskSection(manualTasks) {
+        if (manualTasks.length === 0) {
+          return '<p style="color:#067D62;font-size:0.875rem;">✅ No manual tasks required for this configuration.</p>';
+        }
+
+        const items = manualTasks.map(slide => `
+          <li style="margin-bottom:8px;">
+            <strong>Output Slide ${esc(slide.outputNumber)}</strong>
+            (Original #${esc(slide.originalNumber)}) — <em>${esc(slide.title || `Slide ${slide.originalNumber}`)}</em>
+            <br/>
+            <span style="font-size:0.8rem;color:#8A6116;">
+              This slide contains a "DO &amp; DELETE" note. Replace the screenshot(s) with customer-specific content before presenting.
+            </span>
+          </li>`
+        ).join('');
+
+        return `
+          <ul style="list-style:none;padding:0;margin:0;">
+            ${items}
+          </ul>`;
+      }
+
+      /**
+       * Build the "Unfilled Placeholders" section.
+       * Lists tokens that were not substituted, grouped by slide.
+       */
+      function buildUnfilledSection(unfilledEntries) {
+        if (unfilledEntries.length === 0) {
+          return '<p style="color:#067D62;font-size:0.875rem;">✅ All placeholders were filled.</p>';
+        }
+
+        // Group by token for a cleaner display
+        const byToken = new Map();
+        for (const { slide, token } of unfilledEntries) {
+          if (!byToken.has(token)) byToken.set(token, []);
+          byToken.get(token).push(slide);
+        }
+
+        const items = [...byToken.entries()].map(([token, slides]) => {
+          const slideRefs = slides.map(s =>
+            `Slide ${s.outputNumber} (orig #${s.originalNumber})`
+          ).join(', ');
+          return `
+            <li style="margin-bottom:8px;">
+              <code style="background:#FFF8E7;border:1px solid #F0A500;padding:2px 6px;border-radius:3px;font-size:0.85rem;">${esc(token)}</code>
+              <span style="font-size:0.8rem;color:#565959;margin-left:8px;">— found in: ${esc(slideRefs)}</span>
+            </li>`;
+        }).join('');
+
+        return `
+          <ul style="list-style:none;padding:0;margin:0;">
+            ${items}
+          </ul>`;
+      }
+
+      /**
+       * Wrap all sections in a complete standalone HTML document.
+       */
+      function wrapInDocument({ customerName, generationDate, includedCount, removedCount,
+                                 includedTable, removedTable, manualSection, unfilledSection }) {
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slide Checklist — ${esc(customerName)}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Amazon Ember', Arial, sans-serif;
+      background: #F5F5F5;
+      color: #0F1111;
+      line-height: 1.5;
+      padding: 0 0 48px;
+    }
+    .doc-header {
+      background: #232F3E;
+      color: #fff;
+      padding: 20px 32px;
+    }
+    .doc-header .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .doc-header .logo-dot {
+      width: 28px; height: 28px;
+      background: #FF9900;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .doc-header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .doc-header .meta {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+    .stats-bar {
+      background: #FF9900;
+      color: #232F3E;
+      padding: 8px 32px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      display: flex;
+      gap: 24px;
+    }
+    .content {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 24px;
+    }
+    .section {
+      background: #fff;
+      border: 1px solid #D5D9D9;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .section-header {
+      background: #232F3E;
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .section-header.warning-header {
+      background: #8A6116;
+    }
+    .section-header.error-header {
+      background: #CC0C39;
+    }
+    .section-body {
+      padding: 16px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #D5D9D9;
+      text-align: left;
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #F8F8F8; }
+    code {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+    }
+    .footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #565959;
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="doc-header">
+    <div class="logo-row">
+      <div class="logo-dot"></div>
+      <h1>Slide Checklist — ${esc(customerName)}</h1>
+    </div>
+    <div class="meta">
+      Amazon Business ProServe — Requisitioner Training Deck Generator
+      &nbsp;|&nbsp; Generated: ${esc(generationDate)}
+    </div>
+  </header>
+
+  <div class="stats-bar">
+    <span>✅ ${includedCount} slides included</span>
+    <span>❌ ${removedCount} slides removed</span>
+  </div>
+
+  <div class="content">
+
+    <!-- ── Included Slides ─────────────────────────────────── -->
+    <div class="section">
+      <div class="section-header">✅ Included Slides</div>
+      <div class="section-body">
+        ${includedTable}
+      </div>
+    </div>
+
+    <!-- ── Removed Slides ─────────────────────────────────── -->
+    <div class="section">
+      <div class="section-header">❌ Removed Slides</div>
+      <div class="section-body">
+        ${removedTable}
+      </div>
+    </div>
+
+    <!-- ── Manual Tasks ────────────────────────────────────── -->
+    <div class="section">
+      <div class="section-header warning-header">⚠️ Manual Tasks Required</div>
+      <div class="section-body">
+        <p style="font-size:0.85rem;color:#565959;margin-bottom:12px;">
+          The following slides contain "DO &amp; DELETE" notes and require the CSM to replace
+          screenshots or other content with customer-specific material before presenting.
+        </p>
+        ${manualSection}
+      </div>
+    </div>
+
+    <!-- ── Unfilled Placeholders ───────────────────────────── -->
+    <div class="section">
+      <div class="section-header error-header">🔶 Unfilled Placeholders</div>
+      <div class="section-body">
+        <p style="font-size:0.85rem;color:#565959;margin-bottom:12px;">
+          The following placeholder tokens were found in retained slides but were not replaced
+          because no value was provided in the form. Replace them manually in the generated deck.
+        </p>
+        ${unfilledSection}
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    Generated by Training Deck Planning Hub &mdash; Amazon Business ProServe
+  </div>
+
+</body>
+</html>`;
+      }
+
+      /**
+       * Build the complete checklist HTML document.
+       *
+       * @param {Object} formState       — FormState from FormController
+       * @param {Set<number>} removalSet — original slide numbers that were removed
+       * @param {Array} substitutions    — Array<{ filePath, substitutions, unfilledPlaceholders }>
+       *                                   returned by PptxManipulator.substituteTokens
+       * @param {Array} slideManifest    — Array<SlideRecord> from PptxManipulator.removeSlides
+       * @returns {string} standalone HTML document
+       */
+      function build(formState, removalSet, substitutions, slideManifest) {
+        // Merge substitution data into the manifest records
+        const manifest = mergeSubstitutions(slideManifest, substitutions);
+
+        const included = manifest.filter(s => !s.removed);
+        const removed  = manifest.filter(s => s.removed);
+        const manualTasks = included.filter(s => s.isManualTask);
+
+        // Collect all unfilled placeholder entries across retained slides
+        const unfilledEntries = included.flatMap(slide =>
+          (slide.unfilledPlaceholders || []).map(token => ({ slide, token }))
+        );
+
+        const generationDate = formatDate(new Date());
+        const customerName   = (formState && formState.customerName) ? formState.customerName : 'Customer';
+
+        return wrapInDocument({
+          customerName,
+          generationDate,
+          includedCount: included.length,
+          removedCount:  removed.length,
+          includedTable:   buildIncludedTable(included),
+          removedTable:    buildRemovedTable(removed),
+          manualSection:   buildManualTaskSection(manualTasks),
+          unfilledSection: buildUnfilledSection(unfilledEntries),
+        });
+      }
+
+      return { build };
+    })();
+
+
+    // ── PreviewGuideGenerator ──────────────────────────────────────────────────
+    // build(formState, slideManifest, removalSet) → string (HTML)
+    // Pure function.
+
+    const PreviewGuideGenerator = (() => {
+      // Feature: training-deck-planning-hub
+      // Builds a self-contained HTML preview guide listing all retained slides.
+      // Requirements: 7.2, 7.3, 7.4
+
+      /**
+       * Derive a brief content description from a slide title.
+       * Keeps the guide useful without requiring separate metadata.
+       * @param {string} title
+       * @param {number} originalNumber
+       * @returns {string}
+       */
+      function deriveDescription(title, originalNumber) {
+        const t = (title || '').toLowerCase();
+
+        // Specific keyword matches for common slide types
+        if (t.includes('title') || t.includes('cover'))
+          return 'Opening title slide introducing the training session.';
+        if (t.includes('agenda'))
+          return 'Overview of topics covered in this training session.';
+        if (t.includes('objective'))
+          return 'Learning objectives and goals for this training.';
+        if (t.includes('welcome'))
+          return 'Welcome message and session introduction.';
+        if (t.includes('registration') || t.includes('sign up') || t.includes('sign-up'))
+          return 'Step-by-step guide for registering a new Amazon Business account.';
+        if (t.includes('login') || t.includes('log in') || t.includes('sign in') || t.includes('access'))
+          return 'Instructions for accessing Amazon Business.';
+        if (t.includes('sso') || t.includes('single sign'))
+          return 'Single Sign-On (SSO) configuration and login flow.';
+        if (t.includes('punchout'))
+          return 'Punchout integration workflow from the eProcurement system.';
+        if (t.includes('direct access'))
+          return 'Direct Access login and navigation overview.';
+        if (t.includes('search') || t.includes('find'))
+          return 'How to search for products and find items on Amazon Business.';
+        if (t.includes('cart') || t.includes('checkout'))
+          return 'Adding items to cart and completing the checkout process.';
+        if (t.includes('order') && (t.includes('place') || t.includes('submit')))
+          return 'Placing and submitting purchase orders.';
+        if (t.includes('order') && t.includes('track'))
+          return 'Tracking order status and delivery updates.';
+        if (t.includes('order history') || t.includes('past order'))
+          return 'Viewing and managing order history.';
+        if (t.includes('approval') || t.includes('approve'))
+          return 'Approval workflow — how orders are reviewed and approved.';
+        if (t.includes('guided buying') && t.includes('preferred'))
+          return 'Guided Buying Preferred Policy — directing users to approved products.';
+        if (t.includes('guided buying') && t.includes('restrict'))
+          return 'Guided Buying Restricted Policy — limiting purchasing to approved items.';
+        if (t.includes('guided buying') && t.includes('block'))
+          return 'Guided Buying Blocked Policy — preventing purchase of restricted items.';
+        if (t.includes('guided buying'))
+          return 'Guided Buying policy overview and user experience.';
+        if (t.includes('business prime') || t.includes('prime'))
+          return 'Business Prime benefits including free shipping and exclusive features.';
+        if (t.includes('tax') || t.includes('exemption'))
+          return 'Tax exemption setup and application during checkout.';
+        if (t.includes('blanket') || t.includes('bpo'))
+          return 'Blanket Purchase Order (BPO) — pre-approved budget allocation and usage.';
+        if (t.includes('concur') || t.includes('reconcil'))
+          return 'Concur reconciliation — syncing Amazon Business purchases with expense reports.';
+        if (t.includes('3-way') || t.includes('three-way') || t.includes('receiving') || t.includes('receipt'))
+          return '3-Way Match / Receiving — confirming delivery against purchase orders.';
+        if (t.includes('business giving') || t.includes('giving'))
+          return 'Business Giving — charitable purchasing and donation features.';
+        if (t.includes('government') || t.includes('section 889') || t.includes('889'))
+          return 'Government Store and Section 889 compliance for government customers.';
+        if (t.includes('analytics') || t.includes('report') || t.includes('spend'))
+          return 'Spend analytics and reporting tools for purchasing insights.';
+        if (t.includes('account') && (t.includes('setting') || t.includes('manage') || t.includes('profile')))
+          return 'Account settings and profile management.';
+        if (t.includes('user') && (t.includes('manage') || t.includes('admin') || t.includes('group')))
+          return 'User management — adding, editing, and organizing users and groups.';
+        if (t.includes('payment') || t.includes('invoice') || t.includes('billing'))
+          return 'Payment methods, invoicing, and billing configuration.';
+        if (t.includes('resource') || t.includes('support') || t.includes('help') || t.includes('contact'))
+          return 'Customer resources, support contacts, and help documentation.';
+        if (t.includes('q&a') || t.includes('question') || t.includes('faq'))
+          return 'Q&A and frequently asked questions.';
+        if (t.includes('thank') || t.includes('close') || t.includes('end') || t.includes('next step'))
+          return 'Closing slide with next steps and contact information.';
+        if (t.includes('summary') || t.includes('recap'))
+          return 'Summary and recap of key training points.';
+        if (t.includes('demo') || t.includes('walkthrough'))
+          return 'Live demonstration or walkthrough of the feature.';
+        if (t.includes('tip') || t.includes('best practice'))
+          return 'Tips and best practices for using this feature effectively.';
+        if (t.includes('category') || t.includes('categories'))
+          return 'Product categories and catalog navigation.';
+        if (t.includes('list') && (t.includes('shopping') || t.includes('wish')))
+          return 'Shopping lists — creating and managing saved product lists.';
+        if (t.includes('notification') || t.includes('alert'))
+          return 'Notification settings and order alert configuration.';
+        if (t.includes('mobile') || t.includes('app'))
+          return 'Amazon Business mobile app features and usage.';
+
+        // Fallback: use the title itself as a description seed
+        if (title && title.trim() && title.trim().toLowerCase() !== `slide ${originalNumber}`.toLowerCase()) {
+          return `Content covering: ${title.trim()}.`;
+        }
+        return 'Slide content — refer to the source deck for details.';
+      }
+
+      /**
+       * Escape HTML special characters for safe insertion into HTML.
+       * @param {string} str
+       * @returns {string}
+       */
+      function esc(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      /**
+       * Format a Date as YYYY-MM-DD.
+       * @param {Date} d
+       * @returns {string}
+       */
+      function formatDate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+
+      /**
+       * Build the self-contained HTML preview guide.
+       * @param {object} formState
+       * @param {Array}  slideManifest  - Array of SlideRecord objects
+       * @param {Set}    removalSet     - Set of original slide numbers that were removed
+       * @returns {string} Complete standalone HTML document
+       */
+      function build(formState, slideManifest, removalSet) {
+        const customerName = (formState && formState.customerName) ? formState.customerName : 'Customer';
+        const generationDate = formatDate(new Date());
+
+        // Only include slides where removed = false
+        const retained = (slideManifest || []).filter(s => !s.removed);
+        const totalRetained = retained.length;
+        const totalRemoved = (slideManifest || []).length - totalRetained;
+        const manualTaskCount = retained.filter(s => s.isManualTask).length;
+
+        // Build slide rows
+        const rows = retained.map(slide => {
+          const outputNum = slide.outputNumber != null ? slide.outputNumber : '—';
+          const origNum   = slide.originalNumber != null ? slide.originalNumber : '—';
+          const title     = slide.title || `Slide ${slide.originalNumber}`;
+          const desc      = deriveDescription(title, slide.originalNumber);
+          const isManual  = !!slide.isManualTask;
+
+          const manualBadge = isManual
+            ? `<span style="
+                display:inline-block;
+                background:#FFF3CD;
+                color:#856404;
+                border:1px solid #FFEEBA;
+                border-radius:3px;
+                font-size:0.75rem;
+                font-weight:700;
+                padding:2px 7px;
+                margin-left:8px;
+                vertical-align:middle;
+                white-space:nowrap;
+              ">⚠ Manual Task</span>`
+            : '';
+
+          return `
+          <tr style="border-bottom:1px solid #E8EAED;">
+            <td style="
+              padding:10px 12px;
+              text-align:center;
+              font-weight:700;
+              color:#232F3E;
+              font-size:0.9rem;
+              white-space:nowrap;
+              width:60px;
+            ">${esc(String(outputNum))}</td>
+            <td style="
+              padding:10px 12px;
+              text-align:center;
+              color:#565959;
+              font-size:0.85rem;
+              white-space:nowrap;
+              width:70px;
+            ">${esc(String(origNum))}</td>
+            <td style="padding:10px 12px;">
+              <div style="font-weight:600;color:#0F1111;font-size:0.9rem;margin-bottom:3px;">
+                ${esc(title)}${manualBadge}
+              </div>
+              <div style="color:#565959;font-size:0.82rem;line-height:1.45;">
+                ${esc(desc)}
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+
+        // Summary stats bar
+        const statsHtml = `
+        <div style="
+          display:flex;
+          gap:24px;
+          flex-wrap:wrap;
+          margin-bottom:24px;
+        ">
+          <div style="
+            background:#fff;
+            border:1px solid #D5D9D9;
+            border-radius:4px;
+            padding:12px 20px;
+            text-align:center;
+            min-width:110px;
+          ">
+            <div style="font-size:1.6rem;font-weight:700;color:#232F3E;">${totalRetained}</div>
+            <div style="font-size:0.8rem;color:#565959;margin-top:2px;">Slides Included</div>
+          </div>
+          <div style="
+            background:#fff;
+            border:1px solid #D5D9D9;
+            border-radius:4px;
+            padding:12px 20px;
+            text-align:center;
+            min-width:110px;
+          ">
+            <div style="font-size:1.6rem;font-weight:700;color:#CC0C39;">${totalRemoved}</div>
+            <div style="font-size:0.8rem;color:#565959;margin-top:2px;">Slides Removed</div>
+          </div>
+          ${manualTaskCount > 0 ? `
+          <div style="
+            background:#FFF8E7;
+            border:1px solid #FFEEBA;
+            border-radius:4px;
+            padding:12px 20px;
+            text-align:center;
+            min-width:110px;
+          ">
+            <div style="font-size:1.6rem;font-weight:700;color:#856404;">${manualTaskCount}</div>
+            <div style="font-size:0.8rem;color:#856404;margin-top:2px;">Manual Tasks</div>
+          </div>` : ''}
+        </div>`;
+
+        // Manual tasks callout (if any)
+        const manualSlides = retained.filter(s => s.isManualTask);
+        const manualCallout = manualSlides.length > 0 ? `
+        <div style="
+          background:#FFF8E7;
+          border-left:4px solid #F0A500;
+          border-radius:4px;
+          padding:12px 16px;
+          margin-bottom:24px;
+          font-size:0.875rem;
+          color:#856404;
+        ">
+          <strong>⚠ Manual Tasks Required</strong> — The following slides require the trainer to replace
+          placeholder screenshots or content before presenting:
+          <strong>${manualSlides.map(s => `Slide ${s.outputNumber} (orig. ${s.originalNumber})`).join(', ')}</strong>.
+          Look for "DO &amp; DELETE" notes on these slides.
+        </div>` : '';
+
+        // Empty state
+        const tableContent = retained.length === 0
+          ? `<tr><td colspan="3" style="padding:24px;text-align:center;color:#565959;font-style:italic;">
+              No slides retained — check your configuration.
+             </td></tr>`
+          : rows;
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Training Deck Preview Guide — ${esc(customerName)}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Amazon Ember', Arial, sans-serif;
+      background: #F5F5F5;
+      color: #0F1111;
+      line-height: 1.5;
+      min-width: 600px;
+    }
+    @media print {
+      body { background: #fff; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div style="
+    background:#232F3E;
+    color:#fff;
+    padding:20px 32px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+  ">
+    <div style="
+      width:36px;height:36px;
+      background:#FF9900;
+      border-radius:50%;
+      flex-shrink:0;
+    "></div>
+    <div>
+      <div style="font-size:1.2rem;font-weight:700;letter-spacing:0.01em;">
+        Training Deck Preview Guide
+      </div>
+      <div style="font-size:0.85rem;opacity:0.8;margin-top:2px;">
+        Amazon Business ProServe — Requisitioner Training
+      </div>
+    </div>
+  </div>
+
+  <!-- Sub-header: customer + date -->
+  <div style="
+    background:#FF9900;
+    color:#232F3E;
+    padding:10px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+    font-size:0.875rem;
+    font-weight:700;
+  ">
+    <span>Customer: ${esc(customerName)}</span>
+    <span>Generated: ${esc(generationDate)}</span>
+  </div>
+
+  <!-- Main content -->
+  <div style="max-width:900px;margin:28px auto;padding:0 24px 48px;">
+
+    ${statsHtml}
+    ${manualCallout}
+
+    <!-- Slide table -->
+    <div style="
+      background:#fff;
+      border:1px solid #D5D9D9;
+      border-radius:4px;
+      overflow:hidden;
+    ">
+      <div style="
+        background:#232F3E;
+        color:#fff;
+        padding:10px 16px;
+        font-size:0.9rem;
+        font-weight:700;
+        letter-spacing:0.02em;
+      ">
+        Included Slides (${totalRetained})
+      </div>
+      <table style="
+        width:100%;
+        border-collapse:collapse;
+        font-family:'Amazon Ember',Arial,sans-serif;
+        font-size:0.875rem;
+      ">
+        <thead>
+          <tr style="background:#F5F5F5;border-bottom:2px solid #D5D9D9;">
+            <th style="
+              padding:9px 12px;
+              text-align:center;
+              font-size:0.8rem;
+              font-weight:700;
+              color:#565959;
+              text-transform:uppercase;
+              letter-spacing:0.04em;
+              width:60px;
+            ">#</th>
+            <th style="
+              padding:9px 12px;
+              text-align:center;
+              font-size:0.8rem;
+              font-weight:700;
+              color:#565959;
+              text-transform:uppercase;
+              letter-spacing:0.04em;
+              width:70px;
+            ">Orig.</th>
+            <th style="
+              padding:9px 12px;
+              text-align:left;
+              font-size:0.8rem;
+              font-weight:700;
+              color:#565959;
+              text-transform:uppercase;
+              letter-spacing:0.04em;
+            ">Topic / Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableContent}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div style="
+      margin-top:24px;
+      font-size:0.78rem;
+      color:#888;
+      text-align:center;
+    ">
+      Generated by Training Deck Planning Hub &mdash; Amazon Business ProServe &mdash; ${esc(generationDate)}
+    </div>
+
+  </div>
+
+</body>
+</html>`;
+      }
+
+      return { build };
+    })();
+
+
+    // ── PptxPipeline ───────────────────────────────────────────────────────────
+    // generate(formState, arrayBuffer) → Promise<GenerationResult>
+
+    const PptxPipeline = (() => {
+
+      /**
+       * Replace characters that are not alphanumeric, hyphen, or underscore
+       * with underscores, collapse multiple consecutive underscores, and trim
+       * leading/trailing underscores.
+       *
+       * @param {string} name
+       * @returns {string}
+       */
+      function sanitizeForFilename(name) {
+        return (name || '')
+          .replace(/[^a-zA-Z0-9\-_]/g, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_+|_+$/g, '');
+      }
+
+      /**
+       * Build the output filename for the generated PPTX.
+       * Pattern: Requisitioner_Training_{sanitizedName}_{YYYYMMDD}.pptx
+       *
+       * @param {string} customerName
+       * @returns {string}
+       */
+      function buildOutputFilename(customerName) {
+        const sanitized = sanitizeForFilename(customerName) || 'Customer';
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm   = String(now.getMonth() + 1).padStart(2, '0');
+        const dd   = String(now.getDate()).padStart(2, '0');
+        return `Requisitioner_Training_${sanitized}_${yyyy}${mm}${dd}.pptx`;
+      }
+
+      /**
+       * Orchestrate the full 10-step PPTX generation pipeline.
+       *
+       * Steps:
+       *  1. JSZip.loadAsync(arrayBuffer)
+       *  2. SlideFilterEngine.computeRemovals(formState) → removalSet
+       *  3. PptxManipulator.removeSlides(zip, removalSet) → slideManifest
+       *  4. PlaceholderEngine.buildTokenMap(formState) → tokenMap
+       *  5. Build retainedSlideFiles from slideManifest (removed = false)
+       *  6. PptxManipulator.substituteTokens(zip, tokenMap, retainedSlideFiles) → substitutions
+       *  7. JSZip.generateAsync({ type: 'blob', ... }) → pptxBlob
+       *  8. ChecklistGenerator.build(formState, removalSet, substitutions, slideManifest) → checklistHtml
+       *  9. If formState.generatePreviewGuide: PreviewGuideGenerator.build(...) → previewGuideHtml
+       * 10. Return GenerationResult
+       *
+       * @param {Object} formState
+       * @param {ArrayBuffer} arrayBuffer
+       * @returns {Promise<{success: boolean, pptxBlob?: Blob, pptxFilename?: string,
+       *   checklistHtml?: string, previewGuideHtml?: string|null,
+       *   slideManifest?: Array, removalSet?: Set, error?: string}>}
+       */
+      async function generate(formState, arrayBuffer) {
+        try {
+          // Step 1: Load the PPTX ZIP
+          const zip = await JSZip.loadAsync(arrayBuffer);
+
+          // Step 2: Compute which slides to remove
+          const removalSet = SlideFilterEngine.computeRemovals(formState);
+
+          // Step 3: Remove slides from the ZIP and get the slide manifest
+          const slideManifest = await PptxManipulator.removeSlides(zip, removalSet);
+
+          // Step 4: Build the token → value map
+          const tokenMap = PlaceholderEngine.buildTokenMap(formState);
+
+          // Step 5: Collect retained slide file paths
+          const retainedSlideFiles = slideManifest
+            .filter(record => !record.removed)
+            .map(record => record.slideFile);
+
+          // Step 6: Substitute tokens in all retained slides
+          const substitutions = await PptxManipulator.substituteTokens(zip, tokenMap, retainedSlideFiles);
+
+          // Step 7: Re-zip to a Blob
+          const pptxBlob = await zip.generateAsync({
+            type: 'blob',
+            mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 },
+          });
+
+          // Step 8: Build the slide checklist HTML
+          const checklistHtml = ChecklistGenerator.build(formState, removalSet, substitutions, slideManifest);
+
+          // Step 9: Optionally build the preview guide HTML
+          let previewGuideHtml = null;
+          if (formState.generatePreviewGuide) {
+            previewGuideHtml = PreviewGuideGenerator.build(formState, slideManifest, removalSet);
+          }
+
+          // Step 10: Build the output filename and return the result
+          const pptxFilename = buildOutputFilename(formState.customerName);
+
+          return {
+            success: true,
+            pptxBlob,
+            pptxFilename,
+            checklistHtml,
+            previewGuideHtml,
+            slideManifest,
+            removalSet,
+          };
+
+        } catch (err) {
+          console.error('PptxPipeline.generate failed:', err);
+          return { success: false, error: err.message };
+        }
+      }
+
+      return { generate, buildOutputFilename, sanitizeForFilename };
+    })();
+
+
+    // ── StorageManager ─────────────────────────────────────────────────────────
+    // save(formState), load() → FormState | null, clear()
+
+    const StorageManager = (() => {
+      let _saveTimer = null;
+
+      /**
+       * Serialize all FormState fields except sourceDeckFile to localStorage.
+       * Debounced 300 ms to avoid excessive writes on rapid input.
+       *
+       * @param {Object} formState
+       */
+      function save(formState) {
+        clearTimeout(_saveTimer);
+        _saveTimer = setTimeout(() => {
+          try {
+            // eslint-disable-next-line no-unused-vars
+            const { sourceDeckFile, ...persistable } = formState;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable));
+          } catch (e) {
+            // localStorage may be unavailable (private browsing, quota exceeded)
+            console.warn('StorageManager.save failed:', e);
+          }
+        }, 300);
+      }
+
+      /**
+       * Load persisted FormState from localStorage.
+       * @returns {Object|null} Parsed FormState or null if absent/unparseable
+       */
+      function load() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+          console.warn('StorageManager.load failed:', e);
+          return null;
+        }
+      }
+
+      /**
+       * Remove the persisted FormState from localStorage.
+       */
+      function clear() {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {
+          console.warn('StorageManager.clear failed:', e);
+        }
+      }
+
+      return { save, load, clear };
+    })();
+
+
+    // ── DownloadHelper ─────────────────────────────────────────────────────────
+    // downloadBlob(blob, filename), downloadHtml(htmlString, filename)
+
+    const DownloadHelper = (() => {
+      /**
+       * Trigger a browser download of a Blob.
+       * @param {Blob} blob
+       * @param {string} filename
+       */
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // Revoke after a short delay to allow the download to start
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      /**
+       * Trigger a browser download of an HTML string as a .html file.
+       * @param {string} htmlString
+       * @param {string} filename
+       */
+      function downloadHtml(htmlString, filename) {
+        const blob = new Blob([htmlString], { type: 'text/html;charset=utf-8' });
+        downloadBlob(blob, filename);
+      }
+
+      return { downloadBlob, downloadHtml };
+    })();
+
+
+    // ── FormController ─────────────────────────────────────────────────────────
+    // init(), getFormState(), validate(formState), showValidationSummary(errors),
+    // clearForm()
+    //
+    // Tasks 10.1–10.4: Full implementation of form wiring, conditional field
+    // visibility, state serialization, validation, and clear-form workflow.
+
+    const FormController = (() => {
+
+      // ── Task 10.2: init ───────────────────────────────────────────────────────
+
+      /**
+       * Initialize the FormController: attach all event listeners and restore
+       * any previously saved state from localStorage.
+       */
+      function init() {
+        _attachListeners();
+        _restoreState();
+      }
+
+      // ── Task 10.2: _attachListeners ───────────────────────────────────────────
+
+      /**
+       * Attach change/input event listeners to every form control.
+       * Each listener:
+       *   1. Calls _updateConditionalFields() to show/hide dependent fields.
+       *   2. Calls StorageManager.save(getFormState()) to persist state (debounced
+       *      via StorageManager's built-in 300 ms debounce).
+       */
+      function _attachListeners() {
+        const form = document.getElementById('hub-form');
+        if (!form) return;
+
+        // Listen on the form element using event delegation so we catch all
+        // inputs including those inside conditional blocks that may be hidden.
+        form.addEventListener('change', _onFormChange);
+        form.addEventListener('input',  _onFormChange);
+
+        // Update the file name display when a file is selected (change only).
+        const fileInput = document.getElementById('source-deck-file');
+        if (fileInput) {
+          fileInput.addEventListener('change', () => {
+            const display = document.getElementById('source-deck-filename');
+            if (display) {
+              display.textContent = fileInput.files[0] ? fileInput.files[0].name : '';
+            }
+          });
+        }
+      }
+
+      /**
+       * Shared handler for all form change/input events.
+       * Debounced save is handled inside StorageManager.save().
+       */
+      function _onFormChange() {
+        _updateConditionalFields();
+        StorageManager.save(getFormState());
+      }
+
+      // ── Task 10.2: _restoreState ──────────────────────────────────────────────
+
+      /**
+       * Load persisted form state from localStorage and populate all inputs.
+       * Shows the restore banner if state was found.
+       * Calls _updateConditionalFields() after restoring so conditional fields
+       * reflect the restored values immediately.
+       */
+      function _restoreState() {
+        const saved = StorageManager.load();
+        if (!saved) {
+          // No saved state — still run conditional field update to apply defaults.
+          _updateConditionalFields();
+          return;
+        }
+
+        // ── Text / textarea inputs ──────────────────────────────────────────────
+        _setInputValue('customer-name',          saved.customerName);
+        _setInputValue('categories-in-scope',    saved.categoriesInScope);
+        _setInputValue('identity-provider',      saved.identityProvider);
+        _setInputValue('epro-custom-name',       saved.eproSystemCustomName);
+        _setInputValue('customer-resource-links', saved.customerResourceLinks);
+
+        // ── Checkboxes ──────────────────────────────────────────────────────────
+        _setCheckbox('ingress-direct-access', saved.ingressDirectAccess);
+        _setCheckbox('ingress-punchout',      saved.ingressPunchout);
+        _setCheckbox('generate-preview-guide', saved.generatePreviewGuide);
+
+        // ── Select ──────────────────────────────────────────────────────────────
+        _setSelectValue('epro-system', saved.eproSystem);
+
+        // ── Radio groups ────────────────────────────────────────────────────────
+        _setRadio('directAccessSso', saved.directAccessSso ? 'on' : 'off');
+        _setRadio('punchoutSso',     saved.punchoutSso     ? 'on' : 'off');
+
+        // Feature toggles
+        const features = saved.features || {};
+        _setRadio('featureBusinessPrime',           features.businessPrime           ? 'yes' : 'no');
+        _setRadio('featureApprovals',               features.approvals               ? 'yes' : 'no');
+        _setRadio('featureGuidedBuyingPreferred',   features.guidedBuyingPreferred   ? 'yes' : 'no');
+        _setRadio('featureGuidedBuyingRestricted',  features.guidedBuyingRestricted  ? 'yes' : 'no');
+        _setRadio('featureGuidedBuyingBlocked',     features.guidedBuyingBlocked     ? 'yes' : 'no');
+        _setRadio('featureThreeWayMatch',           features.threeWayMatch           ? 'yes' : 'no');
+        _setRadio('featureBusinessGiving',          features.businessGiving          ? 'yes' : 'no');
+        _setRadio('featureBlanketPOs',              features.blanketPOs              ? 'yes' : 'no');
+        _setRadio('featureTaxExemptions',           features.taxExemptions           ? 'yes' : 'no');
+        _setRadio('featureConcurReconciliation',    features.concurReconciliation    ? 'yes' : 'no');
+        _setRadio('featureGovernmentStore',         features.governmentStore         ? 'yes' : 'no');
+
+        // Approvals scope (may be empty string when approvals = no)
+        if (features.approvalsScope) {
+          _setRadio('approvalsScope', features.approvalsScope);
+        }
+
+        // BPO sub-fields
+        _setInputValue('preferred-asins',      features.preferredAsins);
+        _setInputValue('preferred-list-link',  features.preferredListLink);
+        _setInputValue('bpo-budget-amount',    features.bpoBudgetAmount);
+        _setInputValue('bpo-period-start',     features.bpoBudgetPeriodStart);
+        _setInputValue('bpo-period-end',       features.bpoBudgetPeriodEnd);
+        _setInputValue('bpo-user-groups',      features.bpoUserGroups);
+
+        // Show/hide conditional fields based on restored values
+        _updateConditionalFields();
+
+        // Show the restore banner
+        const banner = document.getElementById('restore-banner');
+        if (banner) banner.classList.add('visible');
+      }
+
+      // ── Restore helpers ───────────────────────────────────────────────────────
+
+      function _setInputValue(id, value) {
+        const el = document.getElementById(id);
+        if (el && value != null) el.value = value;
+      }
+
+      function _setCheckbox(id, checked) {
+        const el = document.getElementById(id);
+        if (el) el.checked = !!checked;
+      }
+
+      function _setSelectValue(id, value) {
+        const el = document.getElementById(id);
+        if (el && value != null) el.value = value;
+      }
+
+      function _setRadio(name, value) {
+        if (value == null) return;
+        const radio = document.querySelector(`input[name="${name}"][value="${value}"]`);
+        if (radio) radio.checked = true;
+      }
+
+      // ── Task 10.2: _updateConditionalFields ───────────────────────────────────
+
+      /**
+       * Central function that reads the current form state and shows/hides all
+       * conditional fields according to the visibility rules table.
+       *
+       * Called after every change/input event and after state restore.
+       *
+       * Visibility conventions:
+       *   .conditional-field  → toggle class 'visible'  (display:none / display:flex)
+       *   .conditional-block  → toggle class 'visible'  (display:none / display:block)
+       *   .sub-fields         → toggle class 'hidden'   (display:flex / display:none)
+       *   .inline-warning     → toggle class 'visible'  (display:none / display:block)
+       */
+      function _updateConditionalFields() {
+        // Read current raw values directly from the DOM (not via getFormState,
+        // to avoid circular dependency and keep this function fast).
+        const directAccess = document.getElementById('ingress-direct-access')?.checked ?? false;
+        const punchout     = document.getElementById('ingress-punchout')?.checked ?? false;
+        const daSsoOn      = document.querySelector('input[name="directAccessSso"]:checked')?.value === 'on';
+        const eproValue    = document.getElementById('epro-system')?.value ?? '';
+        const approvalsYes = document.querySelector('input[name="featureApprovals"]:checked')?.value === 'yes';
+        const gbPrefYes    = document.querySelector('input[name="featureGuidedBuyingPreferred"]:checked')?.value === 'yes';
+        const bpoYes       = document.querySelector('input[name="featureBlanketPOs"]:checked')?.value === 'yes';
+
+        // ── Direct Access SSO block ─────────────────────────────────────────────
+        // Show when Direct Access is checked.
+        _toggleConditionalBlock('direct-access-sso-block', directAccess);
+
+        // ── IDP field ───────────────────────────────────────────────────────────
+        // Show when: Direct Access checked AND da-sso-on selected AND Punchout NOT checked.
+        _toggleConditionalField('idp-field', directAccess && daSsoOn && !punchout);
+
+        // ── Punchout SSO block ──────────────────────────────────────────────────
+        // Show when Punchout is checked.
+        _toggleConditionalBlock('punchout-sso-block', punchout);
+
+        // ── eProcurement System field ───────────────────────────────────────────
+        // Show when Punchout is checked.
+        _toggleConditionalField('epro-field', punchout);
+
+        // ── Custom eProcurement Name field ──────────────────────────────────────
+        // Show when Punchout checked AND eProcurement System is "Custom".
+        _toggleConditionalField('epro-custom-field', punchout && eproValue === 'Custom');
+
+        // ── Approvals sub-fields ────────────────────────────────────────────────
+        // Show (remove 'hidden') when featureApprovals radio value is "yes".
+        _toggleSubFields('approvals-sub-fields', approvalsYes);
+
+        // ── Approvals + Punchout-only warning ───────────────────────────────────
+        // Show when: Approvals = yes AND Punchout checked AND Direct Access NOT checked.
+        _toggleInlineWarning('approvals-punchout-warning', approvalsYes && punchout && !directAccess);
+
+        // ── Guided Buying Preferred sub-fields ──────────────────────────────────
+        // Show when featureGuidedBuyingPreferred radio value is "yes".
+        _toggleSubFields('gb-preferred-sub-fields', gbPrefYes);
+
+        // ── BPO sub-fields ──────────────────────────────────────────────────────
+        // Show when featureBlanketPOs radio value is "yes".
+        _toggleSubFields('bpo-sub-fields', bpoYes);
+      }
+
+      // ── Visibility toggle helpers ─────────────────────────────────────────────
+
+      /** Toggle 'visible' class on a .conditional-field element. */
+      function _toggleConditionalField(id, condition) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('visible', !!condition);
+      }
+
+      /** Toggle 'visible' class on a .conditional-block element. */
+      function _toggleConditionalBlock(id, condition) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('visible', !!condition);
+      }
+
+      /** Toggle 'hidden' class on a .sub-fields element (hidden = not shown). */
+      function _toggleSubFields(id, condition) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden', !condition);
+      }
+
+      /** Toggle 'visible' class on an .inline-warning element. */
+      function _toggleInlineWarning(id, condition) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('visible', !!condition);
+      }
+
+      // ── Task 10.3: getFormState ───────────────────────────────────────────────
+
+      /**
+       * Read all form inputs and return a FormState object.
+       * sourceDeckFile is included but will be excluded from localStorage serialization
+       * by StorageManager (File objects cannot be serialized).
+       *
+       * @returns {Object} FormState
+       */
+      function getFormState() {
+        return {
+          sourceDeckFile: document.getElementById('source-deck-file').files[0] || null,
+          customerName: document.getElementById('customer-name').value.trim(),
+          categoriesInScope: document.getElementById('categories-in-scope').value.trim(),
+          ingressDirectAccess: document.getElementById('ingress-direct-access').checked,
+          ingressPunchout: document.getElementById('ingress-punchout').checked,
+          directAccessSso: document.querySelector('input[name="directAccessSso"]:checked')?.value === 'on',
+          punchoutSso: document.querySelector('input[name="punchoutSso"]:checked')?.value === 'on',
+          eproSystem: document.getElementById('epro-system').value,
+          eproSystemCustomName: document.getElementById('epro-custom-name').value.trim(),
+          identityProvider: document.getElementById('identity-provider').value.trim(),
+          features: {
+            businessPrime: document.querySelector('input[name="featureBusinessPrime"]:checked')?.value === 'yes',
+            approvals: document.querySelector('input[name="featureApprovals"]:checked')?.value === 'yes',
+            approvalsScope: document.querySelector('input[name="approvalsScope"]:checked')?.value || '',
+            guidedBuyingPreferred: document.querySelector('input[name="featureGuidedBuyingPreferred"]:checked')?.value === 'yes',
+            preferredAsins: document.getElementById('preferred-asins').value.trim(),
+            preferredListLink: document.getElementById('preferred-list-link').value.trim(),
+            guidedBuyingRestricted: document.querySelector('input[name="featureGuidedBuyingRestricted"]:checked')?.value === 'yes',
+            guidedBuyingBlocked: document.querySelector('input[name="featureGuidedBuyingBlocked"]:checked')?.value === 'yes',
+            threeWayMatch: document.querySelector('input[name="featureThreeWayMatch"]:checked')?.value === 'yes',
+            businessGiving: document.querySelector('input[name="featureBusinessGiving"]:checked')?.value === 'yes',
+            blanketPOs: document.querySelector('input[name="featureBlanketPOs"]:checked')?.value === 'yes',
+            bpoBudgetAmount: document.getElementById('bpo-budget-amount').value.trim(),
+            bpoBudgetPeriodStart: document.getElementById('bpo-period-start').value,
+            bpoBudgetPeriodEnd: document.getElementById('bpo-period-end').value,
+            bpoUserGroups: document.getElementById('bpo-user-groups').value.trim(),
+            taxExemptions: document.querySelector('input[name="featureTaxExemptions"]:checked')?.value === 'yes',
+            concurReconciliation: document.querySelector('input[name="featureConcurReconciliation"]:checked')?.value === 'yes',
+            governmentStore: document.querySelector('input[name="featureGovernmentStore"]:checked')?.value === 'yes',
+          },
+          customerResourceLinks: document.getElementById('customer-resource-links').value.trim(),
+          generatePreviewGuide: document.getElementById('generate-preview-guide').checked,
+        };
+      }
+
+      // ── Task 10.3: validate ───────────────────────────────────────────────────
+
+      /**
+       * Validate the form state and return a ValidationResult.
+       * Checks all required fields and conditional requirements.
+       *
+       * @param {Object} formState
+       * @returns {{ valid: boolean, errors: Array<{ fieldId: string, message: string }> }}
+       */
+      function validate(formState) {
+        const errors = [];
+
+        // 1. Source deck file is required.
+        if (!formState.sourceDeckFile) {
+          errors.push({
+            fieldId: 'source-deck-file',
+            message: 'Source Deck PPTX file is required',
+          });
+        }
+
+        // 2. Customer name is required.
+        if (!formState.customerName) {
+          errors.push({
+            fieldId: 'customer-name',
+            message: 'Customer Name is required',
+          });
+        }
+
+        // 3. At least one ingress type must be selected.
+        if (!formState.ingressDirectAccess && !formState.ingressPunchout) {
+          errors.push({
+            fieldId: 'ingress-direct-access',
+            message: 'At least one ingress type must be selected',
+          });
+        }
+
+        // 4. eProcurement System is required when Punchout is selected.
+        if (formState.ingressPunchout && !formState.eproSystem) {
+          errors.push({
+            fieldId: 'epro-system',
+            message: 'eProcurement System is required for Punchout',
+          });
+        }
+
+        // 5. Custom eProcurement System Name is required when Custom is selected.
+        if (formState.ingressPunchout && formState.eproSystem === 'Custom' && !formState.eproSystemCustomName) {
+          errors.push({
+            fieldId: 'epro-custom-name',
+            message: 'Custom eProcurement System Name is required',
+          });
+        }
+
+        // 6. Identity Provider is required for Direct Access + SSO ON + no Punchout.
+        if (
+          formState.ingressDirectAccess &&
+          formState.directAccessSso &&
+          !formState.ingressPunchout &&
+          !formState.identityProvider
+        ) {
+          errors.push({
+            fieldId: 'identity-provider',
+            message: 'Identity Provider Name is required for Direct Access + SSO',
+          });
+        }
+
+        // 7. Approval Scope is required when Approvals is enabled.
+        if (formState.features.approvals && !formState.features.approvalsScope) {
+          errors.push({
+            fieldId: 'approvals-sub-fields',
+            message: 'Approval Scope is required when Approvals is enabled',
+          });
+        }
+
+        return { valid: errors.length === 0, errors };
+      }
+
+      // ── Task 10.3: showValidationSummary ──────────────────────────────────────
+
+      /**
+       * Populate the validation summary element with error messages, make it
+       * visible, and move keyboard focus to it so screen readers announce the errors.
+       *
+       * @param {Array<{ fieldId: string, message: string }>} errors
+       */
+      function showValidationSummary(errors) {
+        const summary = document.getElementById('validation-summary');
+        const list    = document.getElementById('validation-error-list');
+        if (!summary || !list) return;
+
+        // Populate the error list
+        list.innerHTML = errors
+          .map(err => `<li>${_escHtml(err.message)}</li>`)
+          .join('');
+
+        // Make the summary visible
+        summary.classList.add('visible');
+
+        // Move focus so keyboard/screen-reader users are taken to the errors
+        summary.focus();
+      }
+
+      /** Minimal HTML escaping for error messages inserted into the DOM. */
+      function _escHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      // ── Task 10.4: clearForm ──────────────────────────────────────────────────
+
+      /**
+       * Prompt the user for confirmation, then reset all form inputs to their
+       * default values, clear localStorage, and hide all result/status elements.
+       */
+      function clearForm() {
+        if (!confirm('Clear all form data? This cannot be undone.')) return;
+
+        // Reset all native form inputs to their default values
+        const form = document.getElementById('hub-form');
+        if (form) form.reset();
+
+        // Clear persisted state
+        StorageManager.clear();
+
+        // Re-evaluate conditional fields after reset (all checkboxes are now unchecked)
+        _updateConditionalFields();
+
+        // Hide status/result elements
+        const toHide = [
+          'validation-summary',
+          'restore-banner',
+          'results-section',
+          'error-banner',
+        ];
+        for (const id of toHide) {
+          const el = document.getElementById(id);
+          if (el) el.classList.remove('visible');
+        }
+
+        // Also clear the file name display
+        const fileDisplay = document.getElementById('source-deck-filename');
+        if (fileDisplay) fileDisplay.textContent = '';
+      }
+
+      // ── Public API ────────────────────────────────────────────────────────────
+
+      return {
+        init,
+        getFormState,
+        validate,
+        showValidationSummary,
+        clearForm,
+        // Expose _updateConditionalFields for use by the Generate button handler
+        // (Task 11) so it can re-evaluate visibility after pipeline completion.
+        _updateConditionalFields,
+      };
+    })();
+
+
+    // ── Bootstrap ──────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      FormController.init();
+
+      // Module-level storage for the most recent successful generation result.
+      // Used by the download buttons (Task 11.2) so they can re-download without
+      // re-running the pipeline.
+      let _lastResult = null;
+
+      // Wire Clear Form button
+      document.getElementById('clear-form-btn').addEventListener('click', () => {
+        FormController.clearForm();
+      });
+
+      // Wire error detail toggle
+      const errorDetailToggle = document.getElementById('error-detail-toggle');
+      const errorDetailText   = document.getElementById('error-detail-text');
+      if (errorDetailToggle && errorDetailText) {
+        errorDetailToggle.addEventListener('click', () => {
+          const expanded = errorDetailToggle.getAttribute('aria-expanded') === 'true';
+          errorDetailToggle.setAttribute('aria-expanded', String(!expanded));
+          errorDetailToggle.textContent = expanded ? 'Show technical details' : 'Hide technical details';
+          errorDetailText.classList.toggle('visible', !expanded);
+        });
+      }
+
+      // ── Task 11.1: Generate button click handler ──────────────────────────────
+
+      const generateBtn = document.getElementById('generate-btn');
+      if (generateBtn) {
+        generateBtn.addEventListener('click', () => {
+          // 1. Read form state and validate
+          const formState = FormController.getFormState();
+          const result    = FormController.validate(formState);
+
+          if (!result.valid) {
+            FormController.showValidationSummary(result.errors);
+            return;
+          }
+
+          // 2. Valid — hide validation summary and error banner
+          const validationSummary = document.getElementById('validation-summary');
+          if (validationSummary) validationSummary.classList.remove('visible');
+
+          const errorBanner = document.getElementById('error-banner');
+          if (errorBanner) errorBanner.classList.remove('visible');
+
+          // 3. Show loading state on Generate button
+          generateBtn.disabled = true;
+          generateBtn.innerHTML = '<span class="spinner"></span> Generating...';
+          generateBtn.setAttribute('aria-busy', 'true');
+
+          // 4. Read source deck file via FileReader
+          const reader = new FileReader();
+
+          reader.onload = async (e) => {
+            const arrayBuffer = e.target.result;
+
+            try {
+              const genResult = await PptxPipeline.generate(formState, arrayBuffer);
+
+              if (genResult.success === true) {
+                // Store result for download buttons
+                _lastResult = genResult;
+
+                // Trigger PPTX download immediately
+                DownloadHelper.downloadBlob(genResult.pptxBlob, genResult.pptxFilename);
+
+                // Render checklist inline using srcdoc (safest cross-browser approach)
+                const checklistContainer = document.getElementById('checklist-container');
+                if (checklistContainer) {
+                  checklistContainer.innerHTML =
+                    `<iframe srcdoc="${genResult.checklistHtml.replace(/"/g, '&quot;')}" title="Slide Checklist"></iframe>`;
+                }
+
+                // Show results section
+                const resultsSection = document.getElementById('results-section');
+                if (resultsSection) resultsSection.classList.add('visible');
+
+                // Show download buttons
+                const downloadPptxBtn      = document.getElementById('download-pptx-btn');
+                const downloadChecklistBtn = document.getElementById('download-checklist-btn');
+                const downloadPreviewBtn   = document.getElementById('download-preview-btn');
+
+                if (downloadPptxBtn)      downloadPptxBtn.style.display      = '';
+                if (downloadChecklistBtn) downloadChecklistBtn.style.display  = '';
+                if (downloadPreviewBtn) {
+                  downloadPreviewBtn.style.display = genResult.previewGuideHtml ? '' : 'none';
+                }
+
+                // Scroll to results
+                if (resultsSection) {
+                  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+              } else {
+                // Show error banner
+                const errorBannerMessage = document.getElementById('error-banner-message');
+                const errorDetailTextEl  = document.getElementById('error-detail-text');
+                const errorBannerEl      = document.getElementById('error-banner');
+
+                if (errorBannerMessage) errorBannerMessage.textContent = genResult.error || 'An unexpected error occurred.';
+                if (errorDetailTextEl)  errorDetailTextEl.textContent  = genResult.error || '';
+                if (errorBannerEl)      errorBannerEl.classList.add('visible');
+              }
+
+            } catch (err) {
+              // Unexpected thrown error — show in error banner
+              const errorBannerMessage = document.getElementById('error-banner-message');
+              const errorDetailTextEl  = document.getElementById('error-detail-text');
+              const errorBannerEl      = document.getElementById('error-banner');
+
+              if (errorBannerMessage) errorBannerMessage.textContent = err.message || 'An unexpected error occurred.';
+              if (errorDetailTextEl)  errorDetailTextEl.textContent  = err.stack  || err.message || '';
+              if (errorBannerEl)      errorBannerEl.classList.add('visible');
+
+            } finally {
+              // Restore Generate button to normal state
+              generateBtn.disabled = false;
+              generateBtn.innerHTML = '⚡ Generate Deck';
+              generateBtn.setAttribute('aria-busy', 'false');
+            }
+          };
+
+          reader.onerror = () => {
+            const errorBannerMessage = document.getElementById('error-banner-message');
+            const errorBannerEl      = document.getElementById('error-banner');
+
+            if (errorBannerMessage) errorBannerMessage.textContent = 'Failed to read the source deck file. Please try selecting the file again.';
+            if (errorBannerEl)      errorBannerEl.classList.add('visible');
+
+            // Restore Generate button
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '⚡ Generate Deck';
+            generateBtn.setAttribute('aria-busy', 'false');
+          };
+
+          reader.readAsArrayBuffer(formState.sourceDeckFile);
+        });
+      }
+
+      // ── Task 11.2: Download button handlers ──────────────────────────────────
+
+      // Helper: build a sanitized filename segment from the customer name
+      function _buildFilenameDate() {
+        const now = new Date();
+        const y   = now.getFullYear();
+        const m   = String(now.getMonth() + 1).padStart(2, '0');
+        const d   = String(now.getDate()).padStart(2, '0');
+        return `${y}${m}${d}`;
+      }
+
+      function _sanitizeForFilename(str) {
+        return (str || 'Customer').replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+      }
+
+      // Download PPTX button — re-downloads the last generated PPTX blob
+      const downloadPptxBtn = document.getElementById('download-pptx-btn');
+      if (downloadPptxBtn) {
+        downloadPptxBtn.addEventListener('click', () => {
+          if (!_lastResult) return;
+          DownloadHelper.downloadBlob(_lastResult.pptxBlob, _lastResult.pptxFilename);
+        });
+      }
+
+      // Download Checklist button
+      const downloadChecklistBtn = document.getElementById('download-checklist-btn');
+      if (downloadChecklistBtn) {
+        downloadChecklistBtn.addEventListener('click', () => {
+          if (!_lastResult) return;
+          const sanitized = _sanitizeForFilename(FormController.getFormState().customerName);
+          const date      = _buildFilenameDate();
+          const filename  = `Checklist_${sanitized}_${date}.html`;
+          DownloadHelper.downloadHtml(_lastResult.checklistHtml, filename);
+        });
+      }
+
+      // Download Preview Guide button (only visible when previewGuideHtml is present)
+      const downloadPreviewBtn = document.getElementById('download-preview-btn');
+      if (downloadPreviewBtn) {
+        downloadPreviewBtn.addEventListener('click', () => {
+          if (!_lastResult || !_lastResult.previewGuideHtml) return;
+          const sanitized = _sanitizeForFilename(FormController.getFormState().customerName);
+          const date      = _buildFilenameDate();
+          const filename  = `PreviewGuide_${sanitized}_${date}.html`;
+          DownloadHelper.downloadHtml(_lastResult.previewGuideHtml, filename);
+        });
+      }
+
+      // Run fast-check property tests if fc is available (developer/test mode only)
+      if (typeof fc !== 'undefined') {
+        console.log('[fast-check] fast-check loaded — property tests will run when engines are implemented.');
+        // Property tests are co-located with each engine task (Tasks 2–8, 12).
+        // Each test is guarded: if (typeof fc !== 'undefined') { fc.assert(...) }
+      }
+    });
+
+  </script>
+</body>
+</html>
