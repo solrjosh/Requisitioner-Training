@@ -850,6 +850,44 @@
             ></textarea>
             <span class="field-hint" id="resources-hint">Replaces <code>{{CUSTOMER_RESOURCES}}</code> on Slide 97.</span>
           </div>
+
+          <!-- Resource Hub Screenshot (Slide 96) -->
+          <div class="field-group" style="margin-top:4px;">
+            <label for="resource-hub-screenshot">
+              Resource Hub Screenshot
+              <span style="font-weight:400;color:var(--color-text-muted);margin-left:6px;">(Slide 96 — How-To Guides &amp; Helpful Resources)</span>
+            </label>
+            <div class="file-input-wrapper">
+              <input
+                type="file"
+                id="resource-hub-screenshot"
+                name="resourceHubScreenshot"
+                accept="image/png,image/jpeg,image/jpg"
+                aria-describedby="screenshot-hint"
+              />
+              <span class="file-name-display" id="screenshot-filename" aria-live="polite"></span>
+            </div>
+            <span class="field-hint" id="screenshot-hint">
+              Upload a screenshot of the customer's Amazon Business Resource Hub page.
+              This replaces the placeholder image in the bottom section of Slide 96.
+              PNG or JPG, recommended size 700×200px or similar landscape crop.
+            </span>
+            <!-- Preview thumbnail -->
+            <div id="screenshot-preview-wrap" style="display:none;margin-top:8px;">
+              <img
+                id="screenshot-preview"
+                alt="Resource Hub screenshot preview"
+                style="max-width:320px;max-height:120px;border:1px solid var(--color-border);border-radius:var(--radius);object-fit:contain;"
+              />
+              <button
+                type="button"
+                id="screenshot-clear-btn"
+                class="btn btn-ghost"
+                style="margin-left:8px;padding:4px 10px;font-size:0.8rem;"
+                aria-label="Remove screenshot"
+              >✕ Remove</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1269,6 +1307,15 @@
         // CSM name — always remove (internal annotation, not shown to end users)
         map.set('{{CSM}}', '');
 
+        // Slide 9 conditional bullet label cleanup.
+        // The [For Punchout] and [For SSO] prefixes are always removed from retained bullets —
+        // the paragraph-level removal (in substituteTokens) handles deleting the whole bullet
+        // when the feature is not in scope. When it IS in scope, we strip just the label prefix.
+        map.set('[For Punchout] ', '');
+        map.set('[For Punchout]', '');
+        map.set('[For SSO] ', '');
+        map.set('[For SSO]', '');
+
         // Consolidation policy label cleanup — remove the badge text from retained slides
         // The retained slide already shows the correct scenario; the label is redundant.
         map.set('without consolidation policy', '');
@@ -1283,10 +1330,12 @@
         map.set('with AUC', '');
 
         // Guided Buying Preferred sub-tokens
+        // Always map both tokens when Preferred Policy is enabled:
+        // - If a value is provided → replace with that value
+        // - If left empty → replace with empty string to remove the token from the slide
         if (s.features.guidedBuyingPreferred) {
-          if (s.features.preferredAsins)    map.set('{{Preferred ASINs}}', s.features.preferredAsins);
-          if (s.features.preferredListLink) map.set('{{Link to Preferred List}}', s.features.preferredListLink);
-          // Preferred Supplier — remove placeholder text if not provided
+          map.set('{{Preferred ASINs}}',        s.features.preferredAsins    || '');
+          map.set('{{Link to Preferred List}}', s.features.preferredListLink || '');
           map.set('{{Preferred Supplier}}', '');
         } else {
           map.set('{{Preferred ASINs}}', '');
@@ -1311,12 +1360,13 @@
         // ePro image placeholder — remove (image must be replaced manually)
         map.set('{{ePro Image}}', '');
 
-        // BPO placeholders (slide 69)
+        // BPO placeholders (slide 69) — always map all tokens when BPOs are enabled
+        // so that any fields left empty are removed from the slide rather than left as tokens.
         if (s.features.blanketPOs) {
-          if (s.features.bpoBudgetAmount)      map.set('{{BPO_BUDGET_AMOUNT}}', s.features.bpoBudgetAmount);
-          if (s.features.bpoBudgetPeriodStart) map.set('{{BPO_PERIOD_START}}', s.features.bpoBudgetPeriodStart);
-          if (s.features.bpoBudgetPeriodEnd)   map.set('{{BPO_PERIOD_END}}', s.features.bpoBudgetPeriodEnd);
-          if (s.features.bpoUserGroups)        map.set('{{BPO_USER_GROUPS}}', s.features.bpoUserGroups);
+          map.set('{{BPO_BUDGET_AMOUNT}}',  s.features.bpoBudgetAmount      || '');
+          map.set('{{BPO_PERIOD_START}}',   s.features.bpoBudgetPeriodStart || '');
+          map.set('{{BPO_PERIOD_END}}',     s.features.bpoBudgetPeriodEnd   || '');
+          map.set('{{BPO_USER_GROUPS}}',    s.features.bpoUserGroups        || '');
         }
 
         // Customer resource links (slide 97)
@@ -1620,6 +1670,15 @@
 
           let xml = await zipEntry.async('text');
           const fileSubstitutions = [];
+
+          // ── Yellow label shape removal ──────────────────────────────────────
+          // Registration slides (12–26) contain a yellow rounded-rectangle shape
+          // (<p:sp> with <a:srgbClr val="FFFF00"/>) used as a label badge
+          // (e.g. "without consolidation policy", "Punchout + SSO", "with AUC").
+          // These are internal authoring labels — remove them from all retained slides.
+          xml = xml.replace(/<p:sp>[\s\S]*?<\/p:sp>/g, (shape) => {
+            return shape.includes('FFFF00') ? '' : shape;
+          });
 
           // ── Paragraph-level removal ─────────────────────────────────────────
           // Remove entire <a:p>...</a:p> blocks that contain conditional markers.
@@ -2620,6 +2679,37 @@
           // Step 6: Substitute tokens in all retained slides
           const substitutions = await PptxManipulator.substituteTokens(zip, tokenMap, retainedSlideFiles, formState);
 
+          // Step 6b: Replace Resource Hub screenshot on slide 96 (How-To Guides) if provided.
+          // The target image is 'ppt/media/image183.png' referenced by rId5 on slide 96.
+          // We overwrite the media file in the ZIP with the user-uploaded image bytes.
+          if (formState.resourceHubScreenshot) {
+            try {
+              const imgFile = formState.resourceHubScreenshot;
+              const imgBuffer = await imgFile.arrayBuffer();
+              const imgExt = imgFile.type === 'image/jpeg' ? 'jpg' : 'png';
+
+              // Overwrite the existing placeholder image in the ZIP
+              // The target is image183.png — we replace its bytes regardless of extension
+              // since the relationship already points to this filename.
+              zip.file('ppt/media/image183.png', imgBuffer);
+
+              // If the uploaded file is a JPEG, we also need to update the content type.
+              // For PNG uploads this is a no-op since the file is already declared as PNG.
+              if (imgFile.type === 'image/jpeg') {
+                let contentTypes = await zip.file('[Content_Types].xml').async('text');
+                // Update the content type for image183.png from PNG to JPEG if needed
+                contentTypes = contentTypes.replace(
+                  /PartName="\/ppt\/media\/image183\.png"[^/]*\/>/,
+                  'PartName="/ppt/media/image183.png" ContentType="image/jpeg"/>'
+                );
+                zip.file('[Content_Types].xml', contentTypes);
+              }
+            } catch (imgErr) {
+              console.warn('Resource Hub screenshot replacement failed:', imgErr);
+              // Non-fatal — continue without replacing the image
+            }
+          }
+
           // Step 7: Re-zip to a Blob
           const pptxBlob = await zip.generateAsync({
             type: 'blob',
@@ -2798,6 +2888,41 @@
               display.textContent = fileInput.files[0] ? fileInput.files[0].name : '';
             }
           });
+        }
+
+        // Wire the Resource Hub screenshot file input — show preview thumbnail on selection.
+        const screenshotInput   = document.getElementById('resource-hub-screenshot');
+        const screenshotPreview = document.getElementById('screenshot-preview');
+        const screenshotWrap    = document.getElementById('screenshot-preview-wrap');
+        const screenshotName    = document.getElementById('screenshot-filename');
+        const screenshotClear   = document.getElementById('screenshot-clear-btn');
+
+        if (screenshotInput) {
+          screenshotInput.addEventListener('change', () => {
+            const file = screenshotInput.files[0];
+            if (file) {
+              screenshotName.textContent = file.name;
+              const url = URL.createObjectURL(file);
+              screenshotPreview.src = url;
+              screenshotWrap.style.display = 'flex';
+              screenshotWrap.style.alignItems = 'center';
+            } else {
+              _clearScreenshot();
+            }
+          });
+        }
+
+        if (screenshotClear) {
+          screenshotClear.addEventListener('click', () => {
+            screenshotInput.value = '';
+            _clearScreenshot();
+          });
+        }
+
+        function _clearScreenshot() {
+          if (screenshotPreview) screenshotPreview.src = '';
+          if (screenshotWrap)    screenshotWrap.style.display = 'none';
+          if (screenshotName)    screenshotName.textContent = '';
         }
       }
 
@@ -3044,6 +3169,7 @@
             mobileApp: document.querySelector('input[name="featureMobileApp"]:checked')?.value === 'yes',
           },
           customerResourceLinks: document.getElementById('customer-resource-links').value.trim(),
+          resourceHubScreenshot: document.getElementById('resource-hub-screenshot').files[0] || null,
           generatePreviewGuide: document.getElementById('generate-preview-guide').checked,
         };
       }
@@ -3192,6 +3318,14 @@
         // Also clear the file name display
         const fileDisplay = document.getElementById('source-deck-filename');
         if (fileDisplay) fileDisplay.textContent = '';
+
+        // Clear the screenshot preview
+        const screenshotInput2 = document.getElementById('resource-hub-screenshot');
+        if (screenshotInput2) screenshotInput2.value = '';
+        const screenshotWrap2 = document.getElementById('screenshot-preview-wrap');
+        if (screenshotWrap2) screenshotWrap2.style.display = 'none';
+        const screenshotName2 = document.getElementById('screenshot-filename');
+        if (screenshotName2) screenshotName2.textContent = '';
       }
 
       // ── Public API ────────────────────────────────────────────────────────────
