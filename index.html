@@ -619,6 +619,42 @@
                   Replaces <code>{{EPRO}}</code>. Note: slides 49–52 will require manual replacement.
                 </span>
               </div>
+
+              <!-- eProcurement Tile Screenshot (Slide 49) — shown when Punchout is selected -->
+              <div class="conditional-field" id="epro-tile-screenshot-field">
+                <label for="epro-tile-screenshot">
+                  eProcurement Tile Screenshot
+                  <span style="font-weight:400;color:var(--color-text-muted);margin-left:6px;">(optional — Slide 49)</span>
+                </label>
+                <div class="file-input-wrapper">
+                  <input
+                    type="file"
+                    id="epro-tile-screenshot"
+                    name="eproTileScreenshot"
+                    accept="image/png,image/jpeg,image/jpg"
+                    aria-describedby="epro-tile-hint"
+                  />
+                  <span class="file-name-display" id="epro-tile-filename" aria-live="polite"></span>
+                </div>
+                <span class="field-hint" id="epro-tile-hint">
+                  Upload a screenshot of the Amazon Business tile in your customer's eProcurement system.
+                  Replaces the placeholder tile image on Slide 49. PNG or JPG.
+                </span>
+                <div id="epro-tile-preview-wrap" style="display:none;margin-top:8px;">
+                  <img
+                    id="epro-tile-preview"
+                    alt="eProcurement tile screenshot preview"
+                    style="max-width:240px;max-height:100px;border:1px solid var(--color-border);border-radius:var(--radius);object-fit:contain;"
+                  />
+                  <button
+                    type="button"
+                    id="epro-tile-clear-btn"
+                    class="btn btn-ghost"
+                    style="margin-left:8px;padding:4px 10px;font-size:0.8rem;"
+                    aria-label="Remove eProcurement tile screenshot"
+                  >✕ Remove</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -2762,6 +2798,27 @@
             }
           }
 
+          // Step 6c: Replace eProcurement tile image on slide 49 if provided.
+          // The target image is 'ppt/media/image23.png' referenced by rId4 on slide 49.
+          // This is the Amazon Business tile shown in the customer's eProcurement catalog.
+          if (formState.eproTileScreenshot) {
+            try {
+              const imgFile = formState.eproTileScreenshot;
+              const imgBuffer = await imgFile.arrayBuffer();
+              zip.file('ppt/media/image23.png', imgBuffer);
+              if (imgFile.type === 'image/jpeg') {
+                let contentTypes = await zip.file('[Content_Types].xml').async('text');
+                contentTypes = contentTypes.replace(
+                  /PartName="\/ppt\/media\/image23\.png"[^/]*\/>/,
+                  'PartName="/ppt/media/image23.png" ContentType="image/jpeg"/>'
+                );
+                zip.file('[Content_Types].xml', contentTypes);
+              }
+            } catch (imgErr) {
+              console.warn('eProcurement tile screenshot replacement failed:', imgErr);
+            }
+          }
+
           // Step 7: Re-zip to a Blob
           const pptxBlob = await zip.generateAsync({
             type: 'blob',
@@ -2976,6 +3033,45 @@
           if (screenshotWrap)    screenshotWrap.style.display = 'none';
           if (screenshotName)    screenshotName.textContent = '';
         }
+
+        // Wire the eProcurement Tile screenshot file input (Slide 49).
+        _wireImageUpload(
+          'epro-tile-screenshot',
+          'epro-tile-preview',
+          'epro-tile-preview-wrap',
+          'epro-tile-filename',
+          'epro-tile-clear-btn'
+        );
+
+        // Shared helper for image upload inputs with preview + clear.
+        function _wireImageUpload(inputId, previewId, wrapId, nameId, clearId) {
+          const inp   = document.getElementById(inputId);
+          const prev  = document.getElementById(previewId);
+          const wrap  = document.getElementById(wrapId);
+          const name  = document.getElementById(nameId);
+          const clear = document.getElementById(clearId);
+          if (!inp) return;
+          inp.addEventListener('change', () => {
+            const file = inp.files[0];
+            if (file) {
+              if (name) name.textContent = file.name;
+              if (prev) prev.src = URL.createObjectURL(file);
+              if (wrap) { wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; }
+            } else {
+              if (prev) prev.src = '';
+              if (wrap) wrap.style.display = 'none';
+              if (name) name.textContent = '';
+            }
+          });
+          if (clear) {
+            clear.addEventListener('click', () => {
+              inp.value = '';
+              if (prev) prev.src = '';
+              if (wrap) wrap.style.display = 'none';
+              if (name) name.textContent = '';
+            });
+          }
+        }
       }
 
       /**
@@ -3131,6 +3227,10 @@
         // Show when Punchout checked AND eProcurement System is "Custom".
         _toggleConditionalField('epro-custom-field', punchout && eproValue === 'Custom');
 
+        // ── eProcurement Tile Screenshot field ──────────────────────────────────
+        // Show when Punchout is checked (slide 49 is punchout-only).
+        _toggleConditionalField('epro-tile-screenshot-field', punchout);
+
         // ── Approvals sub-fields ────────────────────────────────────────────────
         // Show (remove 'hidden') when featureApprovals radio value is "yes".
         _toggleSubFields('approvals-sub-fields', approvalsYes);
@@ -3228,6 +3328,7 @@
           },
           customerResourceLinks: document.getElementById('customer-resource-links').value.trim(),
           resourceHubScreenshot: document.getElementById('resource-hub-screenshot').files[0] || null,
+          eproTileScreenshot: document.getElementById('epro-tile-screenshot').files[0] || null,
           generatePreviewGuide: document.getElementById('generate-preview-guide').checked,
         };
       }
@@ -3384,6 +3485,14 @@
         if (screenshotWrap2) screenshotWrap2.style.display = 'none';
         const screenshotName2 = document.getElementById('screenshot-filename');
         if (screenshotName2) screenshotName2.textContent = '';
+
+        // Clear the eProcurement tile screenshot
+        const eproTileInput = document.getElementById('epro-tile-screenshot');
+        if (eproTileInput) eproTileInput.value = '';
+        const eproTileWrap = document.getElementById('epro-tile-preview-wrap');
+        if (eproTileWrap) eproTileWrap.style.display = 'none';
+        const eproTileName = document.getElementById('epro-tile-filename');
+        if (eproTileName) eproTileName.textContent = '';
       }
 
       // ── Public API ────────────────────────────────────────────────────────────
