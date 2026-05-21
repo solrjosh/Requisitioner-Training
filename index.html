@@ -767,33 +767,56 @@
           </div>
           <!-- BPO sub-fields -->
           <div class="sub-fields hidden" id="bpo-sub-fields">
-            <div class="field-group">
-              <label for="bpo-budget-amount">BPO Budget Amount</label>
-              <input type="text" id="bpo-budget-amount" name="bpoBudgetAmount"
-                placeholder="e.g. $50,000"
-                aria-describedby="bpo-amount-hint" />
-              <span class="field-hint" id="bpo-amount-hint">Replaces <code>{{BPO_BUDGET_AMOUNT}}</code>.</span>
-            </div>
+            <p class="field-hint" style="margin-bottom:4px;">
+              These values populate the bullet points on Slide 69 (Blanket Purchase Orders).
+            </p>
+            <!-- "XX Budgets for XX Groups" -->
             <div class="date-row">
               <div class="field-group">
-                <label for="bpo-period-start">Budget Period Start</label>
-                <input type="date" id="bpo-period-start" name="bpoBudgetPeriodStart"
-                  aria-describedby="bpo-start-hint" />
-                <span class="field-hint" id="bpo-start-hint">Replaces <code>{{BPO_PERIOD_START}}</code>.</span>
+                <label for="bpo-num-budgets">Number of Budgets</label>
+                <input type="text" id="bpo-num-budgets" name="bpoNumBudgets"
+                  placeholder="e.g. 3"
+                  aria-describedby="bpo-budgets-hint" />
+                <span class="field-hint" id="bpo-budgets-hint">Replaces <code>XX</code> in "XX Budgets for XX Groups"</span>
               </div>
               <div class="field-group">
-                <label for="bpo-period-end">Budget Period End</label>
-                <input type="date" id="bpo-period-end" name="bpoBudgetPeriodEnd"
-                  aria-describedby="bpo-end-hint" />
-                <span class="field-hint" id="bpo-end-hint">Replaces <code>{{BPO_PERIOD_END}}</code>.</span>
+                <label for="bpo-num-groups">Number of Groups</label>
+                <input type="text" id="bpo-num-groups" name="bpoNumGroups"
+                  placeholder="e.g. 5"
+                  aria-describedby="bpo-groups-hint" />
+                <span class="field-hint" id="bpo-groups-hint">Replaces <code>XX</code> in "XX Budgets for XX Groups"</span>
               </div>
             </div>
+            <!-- "$$ per budget" -->
             <div class="field-group">
-              <label for="bpo-user-groups">Applicable User Groups</label>
-              <input type="text" id="bpo-user-groups" name="bpoUserGroups"
-                placeholder="e.g. Finance Team, Procurement"
-                aria-describedby="bpo-groups-hint" />
-              <span class="field-hint" id="bpo-groups-hint">Replaces <code>{{BPO_USER_GROUPS}}</code>.</span>
+              <label for="bpo-per-budget">Amount per Budget</label>
+              <input type="text" id="bpo-per-budget" name="bpoPerBudget"
+                placeholder="e.g. $10,000"
+                aria-describedby="bpo-per-budget-hint" />
+              <span class="field-hint" id="bpo-per-budget-hint">Replaces <code>$$</code> in "$$ per budget"</span>
+            </div>
+            <!-- "$$ per user allocation" -->
+            <div class="field-group">
+              <label for="bpo-per-user">Amount per User Allocation</label>
+              <input type="text" id="bpo-per-user" name="bpoPerUser"
+                placeholder="e.g. $500"
+                aria-describedby="bpo-per-user-hint" />
+              <span class="field-hint" id="bpo-per-user-hint">Replaces <code>$$</code> in "$$ per user allocation"</span>
+            </div>
+            <!-- "Budget good from XX/XX/XXXX to XX/XX/XXXX" -->
+            <div class="date-row">
+              <div class="field-group">
+                <label for="bpo-period-start">Budget Start Date</label>
+                <input type="date" id="bpo-period-start" name="bpoBudgetPeriodStart"
+                  aria-describedby="bpo-start-hint" />
+                <span class="field-hint" id="bpo-start-hint">Start of "Budget good from ... to ..."</span>
+              </div>
+              <div class="field-group">
+                <label for="bpo-period-end">Budget End Date</label>
+                <input type="date" id="bpo-period-end" name="bpoBudgetPeriodEnd"
+                  aria-describedby="bpo-end-hint" />
+                <span class="field-hint" id="bpo-end-hint">End of "Budget good from ... to ..."</span>
+              </div>
             </div>
           </div>
 
@@ -830,6 +853,15 @@
             <div class="radio-group" role="radiogroup" aria-labelledby="label-mobile-app">
               <label><input type="radio" name="featureMobileApp" value="yes" checked /> Yes</label>
               <label><input type="radio" name="featureMobileApp" value="no" /> No</label>
+            </div>
+          </div>
+
+          <!-- Your Catalog -->
+          <div class="toggle-row">
+            <span class="toggle-label" id="label-your-catalog">Your Catalog</span>
+            <div class="radio-group" role="radiogroup" aria-labelledby="label-your-catalog">
+              <label><input type="radio" name="featureYourCatalog" value="yes" /> Yes</label>
+              <label><input type="radio" name="featureYourCatalog" value="no" checked /> No</label>
             </div>
           </div>
 
@@ -1215,6 +1247,13 @@
         reason: 'Feature not in scope: Amazon Business Mobile App',
       },
 
+      // Rule 22: Your Catalog disabled
+      {
+        slides: [41],
+        condition: s => !s.features.yourCatalog,
+        reason: 'Feature not in scope: Your Catalog',
+      },
+
     ]; // end SLIDE_FILTER_RULES — 21 rules total
 
 
@@ -1360,13 +1399,33 @@
         // ePro image placeholder — remove (image must be replaced manually)
         map.set('{{ePro Image}}', '');
 
-        // BPO placeholders (slide 69) — always map all tokens when BPOs are enabled
-        // so that any fields left empty are removed from the slide rather than left as tokens.
+        // BPO slide 69 — replace the literal placeholder text with user-provided values.
+        // The slide uses "XX" and "$$" as placeholders, not {{tokens}}.
+        // We replace the full bullet strings so the output reads naturally.
         if (s.features.blanketPOs) {
-          map.set('{{BPO_BUDGET_AMOUNT}}',  s.features.bpoBudgetAmount      || '');
-          map.set('{{BPO_PERIOD_START}}',   s.features.bpoBudgetPeriodStart || '');
-          map.set('{{BPO_PERIOD_END}}',     s.features.bpoBudgetPeriodEnd   || '');
-          map.set('{{BPO_USER_GROUPS}}',    s.features.bpoUserGroups        || '');
+          const numBudgets = s.features.bpoNumBudgets || 'XX';
+          const numGroups  = s.features.bpoNumGroups  || 'XX';
+          const perBudget  = s.features.bpoPerBudget  || '$$';
+          const perUser    = s.features.bpoPerUser    || '$$';
+
+          // Format dates as MM/DD/YYYY if provided, otherwise keep XX/XX/XXXX
+          const fmtDate = (val) => {
+            if (!val) return 'XX/XX/XXXX';
+            const d = new Date(val + 'T00:00:00'); // avoid timezone shift
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            return `${mm}/${dd}/${yyyy}`;
+          };
+          const startDate = fmtDate(s.features.bpoBudgetPeriodStart);
+          const endDate   = fmtDate(s.features.bpoBudgetPeriodEnd);
+
+          // Replace the exact bullet strings from the slide
+          map.set('XX Budgets for XX Groups', `${numBudgets} Budgets for ${numGroups} Groups`);
+          map.set('$$ per budget',            `${perBudget} per budget`);
+          map.set('$$ per user allocation',   `${perUser} per user allocation`);
+          map.set('Budget good from XX/XX/XXXX to XX/XX/XXXX',
+                  `Budget good from ${startDate} to ${endDate}`);
         }
 
         // Customer resource links (slide 97)
@@ -1489,23 +1548,16 @@
 
         const presentationXmlText = await zip.file('ppt/presentation.xml').async('text');
 
-        // Use DOMParser to extract the ordered <p:sldId> list.
-        // We need the r:id attribute from each <p:sldId> element.
-        const parser = new DOMParser();
-        const presentationDoc = parser.parseFromString(presentationXmlText, 'application/xml');
-
-        // Collect all <p:sldId> elements in document order.
-        // getElementsByTagNameNS is the safest cross-browser approach for namespaced elements.
-        const sldIdElements = Array.from(
-          presentationDoc.getElementsByTagNameNS(
-            'http://schemas.openxmlformats.org/presentationml/2006/main',
-            'sldId'
-          )
-        );
-
-        // Extract the r:id attribute (namespace: http://schemas.openxmlformats.org/officeDocument/2006/relationships)
-        const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-        const orderedRIds = sldIdElements.map(el => el.getAttributeNS(R_NS, 'id'));
+        // Extract the ordered list of r:id values from <p:sldId> elements using regex.
+        // This is more reliable than DOMParser + getAttributeNS across all browsers,
+        // since namespace prefix resolution can be inconsistent.
+        // Each element looks like: <p:sldId id="378" r:id="rId5"/>
+        const orderedRIds = [];
+        const sldIdPattern = /<p:sldId[^>]+r:id="([^"]+)"/g;
+        let sldIdMatch;
+        while ((sldIdMatch = sldIdPattern.exec(presentationXmlText)) !== null) {
+          orderedRIds.push(sldIdMatch[1]);
+        }
 
         // ── Phase 2: Build rId → slideFilePath map from presentation.xml.rels ──
 
@@ -2986,6 +3038,7 @@
         _setRadio('featureConcurReconciliation',    features.concurReconciliation    ? 'yes' : 'no');
         _setRadio('featureGovernmentStore',         features.governmentStore         ? 'yes' : 'no');
         _setRadio('featureMobileApp',               features.mobileApp !== false     ? 'yes' : 'no');
+        _setRadio('featureYourCatalog',             features.yourCatalog === true     ? 'yes' : 'no');
 
         // Approvals scope (may be empty string when approvals = no)
         if (features.approvalsScope) {
@@ -2995,10 +3048,12 @@
         // BPO sub-fields
         _setInputValue('preferred-asins',      features.preferredAsins);
         _setInputValue('preferred-list-link',  features.preferredListLink);
-        _setInputValue('bpo-budget-amount',    features.bpoBudgetAmount);
+        _setInputValue('bpo-num-budgets',      features.bpoNumBudgets);
+        _setInputValue('bpo-num-groups',       features.bpoNumGroups);
+        _setInputValue('bpo-per-budget',       features.bpoPerBudget);
+        _setInputValue('bpo-per-user',         features.bpoPerUser);
         _setInputValue('bpo-period-start',     features.bpoBudgetPeriodStart);
         _setInputValue('bpo-period-end',       features.bpoBudgetPeriodEnd);
-        _setInputValue('bpo-user-groups',      features.bpoUserGroups);
 
         // Show/hide conditional fields based on restored values
         _updateConditionalFields();
@@ -3159,14 +3214,17 @@
             threeWayMatch: document.querySelector('input[name="featureThreeWayMatch"]:checked')?.value === 'yes',
             businessGiving: document.querySelector('input[name="featureBusinessGiving"]:checked')?.value === 'yes',
             blanketPOs: document.querySelector('input[name="featureBlanketPOs"]:checked')?.value === 'yes',
-            bpoBudgetAmount: document.getElementById('bpo-budget-amount').value.trim(),
+            bpoNumBudgets: document.getElementById('bpo-num-budgets').value.trim(),
+            bpoNumGroups: document.getElementById('bpo-num-groups').value.trim(),
+            bpoPerBudget: document.getElementById('bpo-per-budget').value.trim(),
+            bpoPerUser: document.getElementById('bpo-per-user').value.trim(),
             bpoBudgetPeriodStart: document.getElementById('bpo-period-start').value,
             bpoBudgetPeriodEnd: document.getElementById('bpo-period-end').value,
-            bpoUserGroups: document.getElementById('bpo-user-groups').value.trim(),
             taxExemptions: document.querySelector('input[name="featureTaxExemptions"]:checked')?.value === 'yes',
             concurReconciliation: document.querySelector('input[name="featureConcurReconciliation"]:checked')?.value === 'yes',
             governmentStore: document.querySelector('input[name="featureGovernmentStore"]:checked')?.value === 'yes',
             mobileApp: document.querySelector('input[name="featureMobileApp"]:checked')?.value === 'yes',
+            yourCatalog: document.querySelector('input[name="featureYourCatalog"]:checked')?.value === 'yes',
           },
           customerResourceLinks: document.getElementById('customer-resource-links').value.trim(),
           resourceHubScreenshot: document.getElementById('resource-hub-screenshot').files[0] || null,
