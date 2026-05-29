@@ -1765,7 +1765,17 @@
           // (e.g. "without consolidation policy", "Punchout + SSO", "with AUC").
           // These are internal authoring labels — remove them from all retained slides.
           xml = xml.replace(/<p:sp>[\s\S]*?<\/p:sp>/g, (shape) => {
-            return shape.includes('FFFF00') ? '' : shape;
+            // Remove yellow-filled label badges (FFFF00)
+            if (shape.includes('FFFF00')) return '';
+            // Remove red-bordered authoring note boxes (FF0000 border) that contain
+            // "DO & DELETE", "DELETE IF", "REMOVE", "PUNCHOUT ONLY", or similar notes.
+            if (shape.includes('FF0000')) {
+              const shapeText = (shape.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [])
+                .map(t => t.replace(/<[^>]+>/g, '')).join(' ');
+              const isAuthoringNote = /DO\s*&(?:amp;)?\s*DELETE|DELETE\s*IF|DELETE:\s*IF|REMOVE\s*IF|PUNCHOUT\s*ONLY|REPLACE\s*WITH|Update\s*(image|screenshot)|Adjust\s*top/i.test(shapeText);
+              if (isAuthoringNote) return '';
+            }
+            return shape;
           });
 
           // ── Paragraph-level removal ─────────────────────────────────────────
@@ -1799,33 +1809,25 @@
           // For example: "{{EPRO}} / {{SSO}}" with EPRO removed → " / SSO"
           // We clean these up by post-processing the text content of each <a:t> node.
           //
-          // Patterns handled (within a single <a:t> text run):
-          //   "  /  text"  → "text"   (leading separator)
-          //   "text  /  "  → "text"   (trailing separator)
-          //   "  /  "      → ""       (separator only)
-          //   " / text / " → "text"   (both sides)
+          // IMPORTANT: We only strip leading/trailing " / " separators, NOT general
+          // whitespace — stripping spaces would break words that span multiple runs.
           xml = xml.replace(/(<a:t[^>]*>)([\s\S]*?)(<\/a:t>)/g, (match, open, text, close) => {
             // Remove leading " / " or "/ " patterns (token was before the slash)
             let cleaned = text.replace(/^\s*\/\s*/g, '');
             // Remove trailing " / " or " /" patterns (token was after the slash)
             cleaned = cleaned.replace(/\s*\/\s*$/g, '');
-            // Collapse multiple spaces left by removal
-            cleaned = cleaned.replace(/  +/g, ' ').trim();
+            // Collapse multiple consecutive spaces (but preserve single spaces)
+            cleaned = cleaned.replace(/  +/g, ' ');
+            // Only trim if the entire run is now whitespace — don't trim partial runs
+            if (cleaned.trim() === '') cleaned = '';
             return open + cleaned + close;
           });
 
-          // ── Cross-run separator cleanup ─────────────────────────────────────
-          // Handle the case where a token and its separator are in adjacent <a:t> runs.
-          // e.g. run1: "Coupa " → "" (empty after substitution), run2: "/ SSO"
-          // After run1 becomes empty, run2 starts with "/ " which should be removed.
-          // Similarly: run1: "Coupa /", run2: "" (empty) → run1 trailing slash removed.
-          //
-          // Strategy: remove <a:t> elements that are now empty or whitespace-only,
-          // then clean up any runs that now start or end with orphaned " / ".
-          // We do a second pass on the already-cleaned XML.
+          // ── Cross-run separator cleanup (second pass) ───────────────────────
           xml = xml.replace(/(<a:t[^>]*>)([\s\S]*?)(<\/a:t>)/g, (match, open, text, close) => {
             let cleaned = text.replace(/^\s*\/\s*/g, '').replace(/\s*\/\s*$/g, '');
-            cleaned = cleaned.replace(/  +/g, ' ').trim();
+            cleaned = cleaned.replace(/  +/g, ' ');
+            if (cleaned.trim() === '') cleaned = '';
             return open + cleaned + close;
           });
 
