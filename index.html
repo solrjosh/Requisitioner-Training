@@ -912,13 +912,17 @@
             Slide 3 is an optional "Customer Process Changes" slide. Fill in the fields below to populate it with customer-specific content. Leave blank to keep the original template text.
           </p>
 
-          <!-- Why we set up Amazon Business — preferred supplier & category -->
+          <!-- Why we set up Amazon Business — supplier type & category -->
           <div class="field-group">
-            <label for="process-preferred-supplier">Preferred Supplier Name</label>
-            <input type="text" id="process-preferred-supplier" name="processPreferredSupplier"
-              placeholder="e.g. Amazon Business"
-              aria-describedby="process-supplier-hint" />
-            <span class="field-hint" id="process-supplier-hint">Replaces <code>{{Preferred Supplier}}</code> — e.g. "Amazon Business is our preferred seller for [Category]."</span>
+            <label for="process-preferred-supplier">Amazon Business Supplier Type</label>
+            <select id="process-preferred-supplier" name="processPreferredSupplier"
+              aria-describedby="process-supplier-hint">
+              <option value="">— Select supplier type —</option>
+              <option value="preferred">Preferred Supplier — Primary source for Amazon Business purchases</option>
+              <option value="secondary">Secondary Supplier — Secondary source alongside primary vendor</option>
+              <option value="tail-spend">Tail Spend Supplier — Used for unmanaged/miscellaneous purchases</option>
+            </select>
+            <span class="field-hint" id="process-supplier-hint">Replaces <code>{{Preferred Supplier}}</code> on Slide 3 with the appropriate supplier designation.</span>
           </div>
 
           <div class="field-group">
@@ -1629,6 +1633,17 @@
         }
 
         // Customer Process Changes — Slide 3 tokens
+        // Supplier type maps to the {{Preferred Supplier}} token
+        if (s.processPreferredSupplier) {
+          const supplierTypeMap = {
+            'preferred':   'preferred',
+            'secondary':   'secondary',
+            'tail-spend':  'tail spend',
+          };
+          const supplierLabel = supplierTypeMap[s.processPreferredSupplier] || s.processPreferredSupplier;
+          map.set('{{Preferred Supplier}}', supplierLabel);
+        }
+
         if (s.processExampleItems) {
           map.set('EXAMPLE ITEMS', s.processExampleItems);
         }
