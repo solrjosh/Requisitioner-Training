@@ -904,26 +904,63 @@
         </div>
       </section>
 
+      <!-- ── Section 4b: Customer Process Changes (Slide 3) ──────────────────── -->
+      <section class="form-section" aria-labelledby="section-process-heading">
+        <div class="form-section__header" id="section-process-heading">4b. Customer Process Changes (Slide 3)</div>
+        <div class="form-section__body">
+          <p class="field-hint" style="margin-bottom:4px;">
+            Slide 3 is an optional "Customer Process Changes" slide. Fill in the fields below to populate it with customer-specific content. Leave blank to keep the original template text.
+          </p>
+
+          <!-- Why we set up Amazon Business — preferred supplier & category -->
+          <div class="field-group">
+            <label for="process-preferred-supplier">Preferred Supplier Name</label>
+            <input type="text" id="process-preferred-supplier" name="processPreferredSupplier"
+              placeholder="e.g. Amazon Business"
+              aria-describedby="process-supplier-hint" />
+            <span class="field-hint" id="process-supplier-hint">Replaces <code>{{Preferred Supplier}}</code> — e.g. "Amazon Business is our preferred seller for [Category]."</span>
+          </div>
+
+          <div class="field-group">
+            <label for="process-example-items">Example Items / Categories</label>
+            <input type="text" id="process-example-items" name="processExampleItems"
+              placeholder="e.g. office supplies, breakroom items, IT accessories"
+              aria-describedby="process-items-hint" />
+            <span class="field-hint" id="process-items-hint">Replaces <code>EXAMPLE ITEMS</code> — specific items or categories your organization purchases on Amazon Business.</span>
+          </div>
+
+          <!-- Access method note -->
+          <div class="field-group">
+            <label for="process-access-note">Access Method Note (optional)</label>
+            <textarea id="process-access-note" name="processAccessNote"
+              placeholder="e.g. Employees should only access the centralized Amazon Business account through Coupa."
+              aria-describedby="process-access-hint"
+              style="min-height:70px;"></textarea>
+            <span class="field-hint" id="process-access-hint">Replaces the access method bullet text on Slide 3. If left blank, the original template text is kept.</span>
+          </div>
+        </div>
+      </section>
+
       <!-- ── Section 5: Customer Resources ───────────────────── -->
       <section class="form-section" aria-labelledby="section-resources-heading">
         <div class="form-section__header" id="section-resources-heading">5. Customer Resources</div>
         <div class="form-section__body">
           <div class="field-group">
-            <label for="customer-resource-links">Resource Links (Slide 97)</label>
+            <label for="customer-resource-links">Resource Links (Slide 96)</label>
             <textarea
               id="customer-resource-links"
               name="customerResourceLinks"
               placeholder="Paste customer-specific resource links here (one per line)"
               aria-describedby="resources-hint"
             ></textarea>
-            <span class="field-hint" id="resources-hint">Replaces <code>{{CUSTOMER_RESOURCES}}</code> on Slide 97.</span>
+            <span class="field-hint" id="resources-hint">Replaces <code>{{CUSTOMER_RESOURCES}}</code> on Slide 96.</span>
           </div>
 
-          <!-- Resource Hub Screenshot (Slide 96) -->
+          <!-- Resource Hub Screenshot (Slide 95) -->
           <div class="field-group" style="margin-top:4px;">
             <label for="resource-hub-screenshot">
               Resource Hub Screenshot
-              <span style="font-weight:400;color:var(--color-text-muted);margin-left:6px;">(Slide 96 — How-To Guides &amp; Helpful Resources)</span>
+              <span style="font-weight:400;color:var(--color-text-muted);margin-left:6px;">(Slide 95 — How-To Guides &amp; Helpful Resources)</span>
             </label>
             <div class="file-input-wrapper">
               <input
@@ -937,7 +974,7 @@
             </div>
             <span class="field-hint" id="screenshot-hint">
               Upload a screenshot of the customer's Amazon Business Resource Hub page.
-              This replaces the placeholder image in the bottom section of Slide 96.
+              This replaces the placeholder image in the bottom section of Slide 95.
               PNG or JPG, recommended size 700×200px or similar landscape crop.
             </span>
             <!-- Preview thumbnail -->
@@ -1070,8 +1107,9 @@
       // Rule 1: Direct Access only — remove all Punchout-specific slides
       // Includes: punchout shopping flow, punchout checkout, punchout errors/restrictions,
       // and punchout-specific registration scenario slides (19, 23, 26)
+      // Slide 30 also has punchout-specific content (Cancel Punchout navigation)
       {
-        slides: [19, 23, 26, 49, 50, 51, 52, 55, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
+        slides: [19, 23, 26, 30, 49, 50, 51, 52, 55, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
         condition: s => s.ingressDirectAccess && !s.ingressPunchout,
         reason: 'Direct Access only — Punchout slides not applicable',
       },
@@ -1324,6 +1362,178 @@
     })();
 
 
+    // ── NotesDrivenFilterEngine ────────────────────────────────────────────────
+    // Reads [HUB:REMOVE-IF:...] tags from slide speaker notes and evaluates
+    // conditions against formState to build a dynamic removal set.
+    // This allows the deck itself to carry its own conditional logic — when slides
+    // are added, removed, or reordered in the source PPTX, the rules travel with
+    // them in the notes rather than requiring hub code updates.
+    //
+    // ── Tag format ──────────────────────────────────────────────────────────────
+    // Add one or more tags to a slide's speaker notes (Notes panel in PowerPoint):
+    //
+    //   [HUB:REMOVE-IF:ingress!=punchout]        — remove if Punchout NOT selected
+    //   [HUB:REMOVE-IF:ingress!=direct-access]   — remove if Direct Access NOT selected
+    //   [HUB:REMOVE-IF:sso=false]                — remove if no SSO in use
+    //   [HUB:REMOVE-IF:da-sso=false]             — remove if Direct Access SSO off
+    //   [HUB:REMOVE-IF:punchout-sso=false]       — remove if Punchout SSO off
+    //   [HUB:REMOVE-IF:punchout-only=true]       — remove if BOTH ingress types selected
+    //   [HUB:REMOVE-IF:epro!=coupa]              — remove if ePro system is not Coupa
+    //   [HUB:REMOVE-IF:epro!=ariba]              — remove if ePro system is not Ariba
+    //   [HUB:REMOVE-IF:feature.approvals=false]  — remove if Approvals toggle = No
+    //   [HUB:REMOVE-IF:feature.mobileApp=false]  — remove if Mobile App toggle = No
+    //   (any feature key from formState.features works)
+    //
+    // Multiple tags on one slide use AND logic (all conditions must be met to remove).
+    //
+    // ── How to add tags in PowerPoint ────────────────────────────────────────────
+    // 1. Select the slide
+    // 2. Click View → Notes (or click the Notes panel at the bottom)
+    // 3. Type the tag(s) on their own line — they can coexist with other note text
+    // 4. Tags are case-insensitive and ignored by the training participants
+
+    const NotesDrivenFilterEngine = (() => {
+
+      /**
+       * Read all slide notes from the ZIP and extract [HUB:REMOVE-IF:...] tags.
+       * Returns a map: slideFilePath → array of condition strings.
+       *
+       * @param {JSZip} zip
+       * @param {string[]} orderedSlideFiles - ordered list of slide file paths
+       * @returns {Promise<Map<string, string[]>>}
+       */
+      async function extractNoteConditions(zip, orderedSlideFiles) {
+        const conditionMap = new Map(); // slideFilePath → [conditionString, ...]
+        const TAG_PATTERN = /\[HUB:REMOVE-IF:([^\]]+)\]/gi;
+
+        for (let i = 0; i < orderedSlideFiles.length; i++) {
+          const slideFile = orderedSlideFiles[i];
+          const slideNum  = i + 1;
+
+          // Find the notes slide via the slide's .rels file
+          const slideBasename = slideFile.replace(/^ppt\/slides\//, '').replace(/\.xml$/, '');
+          const relsPath = `ppt/slides/_rels/${slideBasename}.xml.rels`;
+          const relsEntry = zip.file(relsPath);
+          if (!relsEntry) continue;
+
+          const relsXml = await relsEntry.async('text');
+          const notesMatch = relsXml.match(/notesSlides\/(notesSlide\d+\.xml)/);
+          if (!notesMatch) continue;
+
+          const notesPath = `ppt/notesSlides/${notesMatch[1]}`;
+          const notesEntry = zip.file(notesPath);
+          if (!notesEntry) continue;
+
+          const notesXml = await notesEntry.async('text');
+
+          // Extract plain text from notes (join all <a:t> runs)
+          const notesText = (notesXml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [])
+            .map(t => t.replace(/<[^>]+>/g, ''))
+            .join(' ');
+
+          // Find all [HUB:REMOVE-IF:...] tags
+          const conditions = [];
+          let tagMatch;
+          const tagPat = /\[HUB:REMOVE-IF:([^\]]+)\]/gi;
+          while ((tagMatch = tagPat.exec(notesText)) !== null) {
+            conditions.push(tagMatch[1].trim().toLowerCase());
+          }
+
+          if (conditions.length > 0) {
+            conditionMap.set(slideFile, conditions);
+          }
+        }
+
+        return conditionMap;
+      }
+
+      /**
+       * Evaluate a single condition string against formState.
+       * Returns true if the condition is met (slide should be removed).
+       *
+       * @param {string} condition - e.g. "ingress!=punchout", "feature.approvals=false"
+       * @param {Object} formState
+       * @returns {boolean}
+       */
+      function evaluateCondition(condition, formState) {
+        const s = formState;
+
+        // Helper: is punchout in scope?
+        const hasPunchout    = !!s.ingressPunchout;
+        const hasDirectAccess = !!s.ingressDirectAccess;
+        const ssoInUse = (hasDirectAccess && s.directAccessSso) || (hasPunchout && s.punchoutSso);
+
+        // ── ingress conditions ──────────────────────────────────────────────────
+        if (condition === 'ingress!=punchout')       return !hasPunchout;
+        if (condition === 'ingress!=direct-access')  return !hasDirectAccess;
+        if (condition === 'ingress=punchout-only')   return hasPunchout && !hasDirectAccess;
+        if (condition === 'ingress=direct-access-only') return hasDirectAccess && !hasPunchout;
+        if (condition === 'punchout-only=true')      return !(hasPunchout && !hasDirectAccess);
+        if (condition === 'both-ingress=true')       return !(hasPunchout && hasDirectAccess);
+
+        // ── SSO conditions ──────────────────────────────────────────────────────
+        if (condition === 'sso=false')               return !ssoInUse;
+        if (condition === 'sso=true')                return ssoInUse;
+        if (condition === 'da-sso=false')            return !(hasDirectAccess && s.directAccessSso);
+        if (condition === 'da-sso=true')             return !(!hasDirectAccess || !s.directAccessSso);
+        if (condition === 'punchout-sso=false')      return !(hasPunchout && s.punchoutSso);
+        if (condition === 'punchout-sso=true')       return !(!hasPunchout || !s.punchoutSso);
+
+        // ── eProcurement conditions ─────────────────────────────────────────────
+        if (condition === 'epro!=coupa')             return s.eproSystem !== 'Coupa';
+        if (condition === 'epro!=ariba')             return s.eproSystem !== 'Ariba';
+        if (condition === 'epro=coupa')              return s.eproSystem === 'Coupa';
+        if (condition === 'epro=ariba')              return s.eproSystem === 'Ariba';
+        if (condition === 'epro=custom')             return s.eproSystem === 'Custom';
+        if (condition === 'epro!=custom')            return s.eproSystem !== 'Custom';
+
+        // ── Feature conditions ──────────────────────────────────────────────────
+        // Supports any key in formState.features: feature.approvals=false, feature.mobileApp=false, etc.
+        const featureMatch = condition.match(/^feature\.([a-zA-Z]+)=(true|false)$/);
+        if (featureMatch) {
+          const featureKey   = featureMatch[1];
+          const expectFalse  = featureMatch[2] === 'false';
+          const featureIsOn  = !!(s.features && s.features[featureKey]);
+          // "feature.X=false" → remove when feature is off
+          // "feature.X=true"  → remove when feature is on
+          return expectFalse ? !featureIsOn : featureIsOn;
+        }
+
+        // Unknown condition — don't remove
+        console.warn(`[HUB] Unknown condition: "${condition}"`);
+        return false;
+      }
+
+      /**
+       * Build a removal set from notes-driven conditions.
+       * A slide is removed if ALL its conditions evaluate to true (AND logic).
+       *
+       * @param {Map<string, string[]>} conditionMap - from extractNoteConditions
+       * @param {Object} formState
+       * @param {string[]} orderedSlideFiles
+       * @returns {Set<number>} set of 1-based slide numbers to remove
+       */
+      function computeRemovals(conditionMap, formState, orderedSlideFiles) {
+        const removalSet = new Set();
+
+        for (const [slideFile, conditions] of conditionMap) {
+          // AND logic: remove only if ALL conditions are met
+          const shouldRemove = conditions.every(c => evaluateCondition(c, formState));
+          if (shouldRemove) {
+            const slideIndex = orderedSlideFiles.indexOf(slideFile);
+            if (slideIndex >= 0) {
+              removalSet.add(slideIndex + 1); // 1-based
+            }
+          }
+        }
+
+        return removalSet;
+      }
+
+      return { extractNoteConditions, computeRemovals, evaluateCondition };
+    })();
+
+
     // ── PlaceholderEngine ──────────────────────────────────────────────────────
     // buildTokenMap(formState) → Map<string, string>
     // deriveIngressLabel(formState) → string
@@ -1411,11 +1621,23 @@
         if (s.features.guidedBuyingPreferred) {
           map.set('{{Preferred ASINs}}',        s.features.preferredAsins    || '');
           map.set('{{Link to Preferred List}}', s.features.preferredListLink || '');
-          map.set('{{Preferred Supplier}}', '');
+          map.set('{{Preferred Supplier}}', s.processPreferredSupplier || '');
         } else {
           map.set('{{Preferred ASINs}}', '');
           map.set('{{Link to Preferred List}}', '');
-          map.set('{{Preferred Supplier}}', '');
+          map.set('{{Preferred Supplier}}', s.processPreferredSupplier || '');
+        }
+
+        // Customer Process Changes — Slide 3 tokens
+        if (s.processExampleItems) {
+          map.set('EXAMPLE ITEMS', s.processExampleItems);
+        }
+        if (s.processAccessNote) {
+          // Replace the access method sentence on slide 3
+          map.set('Employees should only access the centralized Amazon Business account through {{EPRO}} /SSO',
+            s.processAccessNote);
+          map.set('Employees should only access the centralized Amazon Business account through {{EPRO}} / {{SSO}}',
+            s.processAccessNote);
         }
 
         // Approvals scope
@@ -1464,7 +1686,7 @@
                   `Budget good from ${startDate} to ${endDate}`);
         }
 
-        // Customer resource links (slide 97)
+        // Customer resource links (slide 96)
         if (s.customerResourceLinks) map.set('{{CUSTOMER_RESOURCES}}', s.customerResourceLinks);
 
         return map;
@@ -1765,8 +1987,10 @@
           // (e.g. "without consolidation policy", "Punchout + SSO", "with AUC").
           // These are internal authoring labels — remove them from all retained slides.
           xml = xml.replace(/<p:sp>[\s\S]*?<\/p:sp>/g, (shape) => {
-            // Remove yellow-filled label badges (FFFF00)
-            if (shape.includes('FFFF00')) return '';
+            // Remove yellow-filled label badges (FFFF00 as shape fill, NOT text highlight)
+            // Only match FFFF00 inside <p:spPr> (shape properties), not <a:highlight> (text)
+            const spPr = shape.match(/<p:spPr>[\s\S]*?<\/p:spPr>/)?.[0] || '';
+            if (spPr.includes('FFFF00')) return '';
             // Remove red-bordered authoring note boxes (FF0000 border) that contain
             // "DO & DELETE", "DELETE IF", "REMOVE", "PUNCHOUT ONLY", or similar notes.
             if (shape.includes('FF0000')) {
@@ -2752,8 +2976,28 @@
           // Step 1: Load the PPTX ZIP
           const zip = await JSZip.loadAsync(arrayBuffer);
 
-          // Step 2: Compute which slides to remove
-          const removalSet = SlideFilterEngine.computeRemovals(formState);
+          // Step 1b: Parse slide order upfront for notes-driven filtering
+          const presXmlText2 = await zip.file('ppt/presentation.xml').async('text');
+          const relsText2    = await zip.file('ppt/_rels/presentation.xml.rels').async('text');
+          const tempRIds2 = [];
+          const sldPat2 = /<p:sldId[^>]+r:id="([^"]+)"/g; let sm3;
+          while ((sm3 = sldPat2.exec(presXmlText2)) !== null) tempRIds2.push(sm3[1]);
+          const tempRIdToFile2 = {};
+          const relPat3 = /<Relationship[^>]+Id="([^"]+)"[^>]+Type="[^"]*\/slide"[^>]+Target="([^"]+)"[^>]*\/?>/g; let rm3;
+          while ((rm3 = relPat3.exec(relsText2)) !== null) {
+            let t2 = rm3[2]; if (t2.startsWith('../')) t2 = 'ppt/' + t2.slice(3); else if (!t2.startsWith('ppt/')) t2 = 'ppt/' + t2;
+            tempRIdToFile2[rm3[1]] = t2;
+          }
+          const orderedSlideFilesForNotes = tempRIds2.map(r => tempRIdToFile2[r]).filter(Boolean);
+
+          // Step 2: Compute which slides to remove.
+          // Uses BOTH the hardcoded SLIDE_FILTER_RULES (legacy) AND the notes-driven
+          // [HUB:REMOVE-IF:...] tags from the deck's speaker notes.
+          const hardcodedRemovals = SlideFilterEngine.computeRemovals(formState);
+          const conditionMap = await NotesDrivenFilterEngine.extractNoteConditions(zip, orderedSlideFilesForNotes);
+          const notesDrivenRemovals = NotesDrivenFilterEngine.computeRemovals(conditionMap, formState, orderedSlideFilesForNotes);
+          const removalSet = new Set([...hardcodedRemovals, ...notesDrivenRemovals]);
+          console.log(`[HUB] Removals — hardcoded: ${hardcodedRemovals.size}, notes-driven: ${notesDrivenRemovals.size}, total: ${removalSet.size}`);
 
           // Step 3: Remove slides from the ZIP and get the slide manifest
           const slideManifest = await PptxManipulator.removeSlides(zip, removalSet);
@@ -2769,8 +3013,8 @@
           // Step 6: Substitute tokens in all retained slides
           const substitutions = await PptxManipulator.substituteTokens(zip, tokenMap, retainedSlideFiles, formState);
 
-          // Step 6b: Replace Resource Hub screenshot on slide 96 (How-To Guides) if provided.
-          // The target image is 'ppt/media/image183.png' referenced by rId5 on slide 96.
+          // Step 6b: Replace Resource Hub screenshot on slide 95 (How-To Guides) if provided.
+          // The target image is 'ppt/media/image183.png' referenced by rId5 on slide 95.
           // We overwrite the media file in the ZIP with the user-uploaded image bytes.
           if (formState.resourceHubScreenshot) {
             try {
@@ -3107,6 +3351,9 @@
         _setInputValue('identity-provider',      saved.identityProvider);
         _setInputValue('epro-custom-name',       saved.eproSystemCustomName);
         _setInputValue('customer-resource-links', saved.customerResourceLinks);
+        _setInputValue('process-preferred-supplier', saved.processPreferredSupplier);
+        _setInputValue('process-example-items',      saved.processExampleItems);
+        _setInputValue('process-access-note',        saved.processAccessNote);
 
         // ── Checkboxes ──────────────────────────────────────────────────────────
         _setCheckbox('ingress-direct-access', saved.ingressDirectAccess);
@@ -3329,6 +3576,9 @@
             yourCatalog: document.querySelector('input[name="featureYourCatalog"]:checked')?.value === 'yes',
           },
           customerResourceLinks: document.getElementById('customer-resource-links').value.trim(),
+          processPreferredSupplier: document.getElementById('process-preferred-supplier').value.trim(),
+          processExampleItems: document.getElementById('process-example-items').value.trim(),
+          processAccessNote: document.getElementById('process-access-note').value.trim(),
           resourceHubScreenshot: document.getElementById('resource-hub-screenshot').files[0] || null,
           eproTileScreenshot: document.getElementById('epro-tile-screenshot').files[0] || null,
           generatePreviewGuide: document.getElementById('generate-preview-guide').checked,
